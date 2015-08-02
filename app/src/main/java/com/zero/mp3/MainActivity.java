@@ -3,6 +3,7 @@ package com.zero.mp3;
 import android.app.Activity;
 import android.content.Intent;
 import android.database.Cursor;
+import android.media.Image;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -10,8 +11,10 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import com.zero.mp3.Utils.L;
 import com.zero.mp3.adapter.MusicListAdapter;
@@ -24,6 +27,7 @@ import java.util.List;
 
 import butterknife.Bind;
 import butterknife.ButterKnife;
+import butterknife.OnClick;
 
 
 public class MainActivity extends Activity implements AdapterView.OnItemClickListener{
@@ -31,12 +35,33 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
 
     private List<Music> mMusics;
     private MusicListAdapter mAdapter;
+    private boolean isPlaying;
 
     @Bind(R.id.update_music_pb)
     ProgressBar mUpdatePBar;
 
     @Bind(R.id.music_list_lv)
     ListView mMusicListView;
+
+    //下一曲
+    @Bind(R.id.music_function_next_iv)
+    ImageView mNextIv;
+
+    //播放或暂停
+    @Bind(R.id.music_function_play_iv)
+    ImageView mPlayIv;
+
+    //上一曲
+    @Bind(R.id.music_function_previous_iv)
+    ImageView mPreviousIv;
+
+    //底部显示歌曲名
+    @Bind(R.id.music_title_tv)
+    TextView mBottomTitle;
+
+    //底部显示歌手名
+    @Bind(R.id.singer_name_tv)
+    TextView mBottomName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,6 +77,7 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
     }
 
     public void initData(){
+        isPlaying = false;
         mMusics = new ArrayList<>();
         mAdapter = new MusicListAdapter(this,mMusics);
     }
@@ -142,8 +168,11 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
         intent.putExtra("url",music.getUrl());
         L.d(TAG, music.getUrl());
         intent.putExtra("MSG", AppContext.MUSIC_PLAY);
-        L.d(TAG,AppContext.MUSIC_PLAY+"");
+        L.d(TAG, AppContext.MUSIC_PLAY + "");
         startService(intent);
+
+        setBottomDisplay(music.getTitle(), music.getAirtist());
+        isPlaying = true;
     }
 
     /**
@@ -165,6 +194,27 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
             mAdapter.setmData(mMusics);
             mAdapter.notifyDataSetChanged();
             mUpdatePBar.setVisibility(View.GONE);
+        }
+    }
+
+    public void setBottomDisplay(String title,String artist){
+        mBottomTitle.setText(title);
+        mBottomName.setText(artist);
+    }
+
+    @OnClick(R.id.music_function_play_iv)
+    public void playMusic(){
+        if (isPlaying)
+        {
+            Intent intent = new Intent(this,PlayService.class);
+            intent.putExtra("MSG", AppContext.MUSIC_PAUSE);
+            startService(intent);
+            isPlaying= false;
+        }else{
+            Intent intent = new Intent(this,PlayService.class);
+            intent.putExtra("MSG", AppContext.MUSIC_PLAY);
+            startService(intent);
+            isPlaying = true;
         }
     }
 }

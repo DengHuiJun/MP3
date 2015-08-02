@@ -20,7 +20,7 @@ public class PlayService extends Service {
     private boolean isPause;
 
     public PlayService(){
-//        super("PlayService");
+
         mediaPlayer = new MediaPlayer();
         isPause = false;
         L.d(TAG);
