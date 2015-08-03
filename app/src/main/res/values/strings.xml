@@ -1,6 +1,5 @@
 <resources>
-    <string name="app_name">MP3</string>
+    <string name="app_name">极致MP3</string>
 
-    <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
 </resources>

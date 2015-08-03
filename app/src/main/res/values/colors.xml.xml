@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="CLOUDS">#ECF0F1</color>
+    <color name="SILVER">#BDC3C7</color>
+
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+
+    <color name="font_gray">#969696</color>
+</resources>

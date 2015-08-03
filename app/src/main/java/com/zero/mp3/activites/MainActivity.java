@@ -1,4 +1,4 @@
-package com.zero.mp3;
+package com.zero.mp3.activites;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -16,7 +16,10 @@ import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import com.melnykov.fab.FloatingActionButton;
+import com.zero.mp3.R;
 import com.zero.mp3.Utils.L;
+import com.zero.mp3.Utils.T;
 import com.zero.mp3.adapter.MusicListAdapter;
 import com.zero.mp3.app.AppContext;
 import com.zero.mp3.beans.Music;
@@ -36,6 +39,9 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
     private List<Music> mMusics;
     private MusicListAdapter mAdapter;
     private boolean isPlaying;
+
+
+    private String url="";
 
     @Bind(R.id.update_music_pb)
     ProgressBar mUpdatePBar;
@@ -63,6 +69,9 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
     @Bind(R.id.singer_name_tv)
     TextView mBottomName;
 
+    @Bind(R.id.add_fab)
+    FloatingActionButton add_fab;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -78,6 +87,7 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
 
     public void initData(){
         isPlaying = false;
+        add_fab.attachToListView(mMusicListView);
         mMusics = new ArrayList<>();
         mAdapter = new MusicListAdapter(this,mMusics);
     }
@@ -163,15 +173,18 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         final Music music = mMusics.get(position);
-
+        url = music.getUrl();
         Intent intent = new Intent(this,PlayService.class);
-        intent.putExtra("url",music.getUrl());
+        intent.putExtra("url",url);
         L.d(TAG, music.getUrl());
         intent.putExtra("MSG", AppContext.MUSIC_PLAY);
         L.d(TAG, AppContext.MUSIC_PLAY + "");
         startService(intent);
 
         setBottomDisplay(music.getTitle(), music.getAirtist());
+        mPlayIv.setImageResource(R.drawable.ic_action_playback_play);
+        mBottomName.setFocusable(true);
+        mBottomName.setFocusableInTouchMode(true);
         isPlaying = true;
     }
 
@@ -202,19 +215,38 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
         mBottomName.setText(artist);
     }
 
+    /**
+     * 绑定播放键事件
+     */
     @OnClick(R.id.music_function_play_iv)
     public void playMusic(){
         if (isPlaying)
         {
             Intent intent = new Intent(this,PlayService.class);
+            intent.putExtra("url",url);
             intent.putExtra("MSG", AppContext.MUSIC_PAUSE);
             startService(intent);
+            mPlayIv.setImageResource(R.drawable.ic_action_playback_pause);
+            mBottomName.setFocusable(false);
+            mBottomName.setFocusableInTouchMode(false);
             isPlaying= false;
         }else{
             Intent intent = new Intent(this,PlayService.class);
+            intent.putExtra("url",url);
             intent.putExtra("MSG", AppContext.MUSIC_PLAY);
             startService(intent);
+            mPlayIv.setImageResource(R.drawable.ic_action_playback_play);
+            mBottomName.setFocusable(true);
+            mBottomName.setFocusableInTouchMode(true);
             isPlaying = true;
         }
+    }
+
+    /**
+     * 绑定添加事件
+     */
+    @OnClick(R.id.add_fab)
+    public void addFab(){
+        T.showShort(this,"add fab");
     }
 }
