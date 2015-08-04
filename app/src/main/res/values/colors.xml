@@ -2,6 +2,9 @@
 <resources>
     <color name="CLOUDS">#ECF0F1</color>
     <color name="SILVER">#BDC3C7</color>
+    <color name="primary">#2C3E50</color>
+
+    <color name="ToolBar">#7F8C8D</color>
 
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>

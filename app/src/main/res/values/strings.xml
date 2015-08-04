@@ -1,5 +1,5 @@
 <resources>
     <string name="app_name">极致MP3</string>
 
-    <string name="action_settings">Settings</string>
+    <string name="action_search">搜索</string>
 </resources>

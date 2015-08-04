@@ -1,13 +1,12 @@
 package com.zero.mp3.activites;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.database.Cursor;
-import android.media.Image;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.MediaStore;
-import android.view.Menu;
+import android.support.v7.app.ActionBarActivity;
+import android.support.v7.widget.Toolbar;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
@@ -33,15 +32,23 @@ import butterknife.ButterKnife;
 import butterknife.OnClick;
 
 
-public class MainActivity extends Activity implements AdapterView.OnItemClickListener{
+public class MainActivity extends ActionBarActivity implements AdapterView.OnItemClickListener{
     private final static String TAG = "MainActivity";
 
     private List<Music> mMusics;
     private MusicListAdapter mAdapter;
     private boolean isPlaying;
 
+    private static final int MUSIC_REPEAT = 0 ;
+    private static final int MUSIC_REPEAT_ONE = 1;
+    private static final int MUSIC_RANDOM = 2;
+
+    private int mMusicCode;
 
     private String url="";
+
+    @Bind(R.id.toolbar)
+    Toolbar mToolbar;
 
     @Bind(R.id.update_music_pb)
     ProgressBar mUpdatePBar;
@@ -70,7 +77,7 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
     TextView mBottomName;
 
     @Bind(R.id.add_fab)
-    FloatingActionButton add_fab;
+    FloatingActionButton mAddFAB;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,15 +86,25 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
         ButterKnife.bind(this);
         L.d(TAG);
         initData();
+        initToolBar();
         mMusicListView.setAdapter(mAdapter);
         mMusicListView.setOnItemClickListener(this);
         new getMusicTask().execute();
 
     }
 
+    private void initToolBar() {
+        mToolbar.setLogo(R.drawable.ic_toolbar);
+        mToolbar.setTitle("ZERO系列");
+        mToolbar.setSubtitle("极致音乐");
+        setSupportActionBar(mToolbar);
+        mToolbar.setOnMenuItemClickListener(onMenuItemClick);
+    }
+
     public void initData(){
         isPlaying = false;
-        add_fab.attachToListView(mMusicListView);
+        mMusicCode = MUSIC_REPEAT;
+//        add_fab.attachToListView(mMusicListView);
         mMusics = new ArrayList<>();
         mAdapter = new MusicListAdapter(this,mMusics);
     }
@@ -98,33 +115,6 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
     public void refreshData(){
         mUpdatePBar.setVisibility(View.VISIBLE);
         new getMusicTask().execute();
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        ButterKnife.unbind(this);
     }
 
     /**
@@ -243,10 +233,63 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
     }
 
     /**
-     * 绑定添加事件
+     * 绑定添加事件【最后考虑为歌曲播放模式，循环或者随机】
      */
     @OnClick(R.id.add_fab)
-    public void addFab(){
-        T.showShort(this,"add fab");
+    public void setPlayMode(){
+        mMusicCode = (mMusicCode+1) % 3;
+        musicPlayMode(mMusicCode);
+    }
+
+    @OnClick(R.id.music_function_next_iv)
+    public void nextMusic(){
+        T.showShort(this,"next music");
+    }
+
+    @OnClick(R.id.music_function_previous_iv)
+    public void previousMusic(){
+        T.showShort(this, "prev music");
+    }
+
+    private Toolbar.OnMenuItemClickListener onMenuItemClick = new Toolbar.OnMenuItemClickListener() {
+        @Override
+        public boolean onMenuItemClick(MenuItem menuItem) {
+            String msg = "";
+            switch (menuItem.getItemId()) {
+                case R.id.action_search:
+                    msg += "Click set";
+                    break;
+            }
+            if(!msg.equals("")) {
+                T.showShort(getApplicationContext(),msg);
+            }
+            return true;
+        }
+    };
+
+    /**
+     * 音乐播放模式
+     */
+    private void musicPlayMode(int code){
+        switch (code){
+            case MUSIC_REPEAT:
+                T.showShort(getApplicationContext(),"切换到列表循环");
+                mAddFAB.setImageResource(R.drawable.ic_action_playback_repeat);
+                break;
+            case MUSIC_REPEAT_ONE:
+                T.showShort(getApplicationContext(),"切换到单曲循环");
+                mAddFAB.setImageResource(R.drawable.ic_action_playback_repeat_1);
+                break;
+            case MUSIC_RANDOM:
+                T.showShort(getApplicationContext(),"切换到随机播放");
+                mAddFAB.setImageResource(R.drawable.ic_action_playback_schuffle);
+                break;
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        ButterKnife.unbind(this);
     }
 }

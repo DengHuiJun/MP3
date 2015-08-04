@@ -5,8 +5,17 @@
     android:layout_height="match_parent"
     android:background="@color/white"
     tools:context=".MainActivity">
+    <android.support.v7.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:minHeight="?attr/actionBarSize"
+        android:background="@color/ToolBar"
+        >
+    </android.support.v7.widget.Toolbar>
 
     <ProgressBar
+        android:layout_below="@+id/toolbar"
         android:id="@+id/update_music_pb"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -15,6 +24,7 @@
 
 
     <FrameLayout
+        android:layout_below="@+id/toolbar"
         android:id="@+id/list_content"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -26,7 +36,7 @@
             android:layout_height="wrap_content"
             android:dividerHeight="1px"
             android:divider="@color/SILVER"
-            android:paddingLeft="10dp"
+            android:background="@color/primary"
             />
 
         <com.melnykov.fab.FloatingActionButton
@@ -35,7 +45,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|right"
             android:layout_margin="16dp"
-            android:src="@drawable/ic_action_add"
+            android:src="@drawable/ic_action_playback_repeat"
             fab:fab_colorNormal="@color/white"
             fab:fab_colorPressed="@color/SILVER"
             fab:fab_colorRipple="@color/CLOUDS" />

@@ -3,21 +3,44 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:gravity="center_vertical"
-    android:layout_marginLeft="16dp"
-    android:orientation="vertical">
+    android:paddingLeft="16dp"
+    android:paddingTop="5dp"
+    android:paddingBottom="5dp"
+    android:paddingRight="16dp"
+    android:orientation="horizontal">
+
+    <LinearLayout
+        android:layout_width="280dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/music_item_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:singleLine="true"
+            android:textSize="20sp"
+            android:textColor="@color/white"
+            android:text="你瞒我瞒"/>
+
+        <TextView
+            android:id="@+id/music_item_artist"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/SILVER"
+            android:layout_marginTop="2dp"
+            android:text="zero"/>
+
+    </LinearLayout>
 
     <TextView
-        android:id="@+id/music_item_title"
-        android:layout_width="wrap_content"
+        android:id="@+id/music_time_tv"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:textSize="20sp"
-        android:text="你瞒我瞒"/>
-
-    <TextView
-        android:id="@+id/music_item_artist"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
-        android:text="zero"/>
+        android:layout_weight="1"
+        android:gravity="right|center_vertical"
+        android:textSize="18sp"
+        android:textColor="@color/SILVER"
+        android:text="06:23"/>
 
 </LinearLayout>

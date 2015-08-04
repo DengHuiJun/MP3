@@ -7,5 +7,6 @@ import android.app.Activity;
  * Created by zero on 15-8-2.
  */
 public class StartActivity extends Activity {
+    private final static String TAG = "StartActivity";
 
 }
