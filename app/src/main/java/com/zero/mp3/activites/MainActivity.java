@@ -103,7 +103,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
 
     public void initData(){
         isPlaying = false;
-        mMusicCode = PlayUtils.MUSIC_REPEAT;
+        mMusicCode = AppContext.MUSIC_REPEAT;
 //        add_fab.attachToListView(mMusicListView);
         mMusics = new ArrayList<>();
         mAdapter = new MusicListAdapter(this,mMusics);
@@ -289,15 +289,15 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
      */
     private void musicPlayMode(int code){
         switch (code){
-            case PlayUtils.MUSIC_REPEAT:
+            case AppContext.MUSIC_REPEAT:
                 T.showShort(getApplicationContext(),"切换到列表循环");
                 mAddFAB.setImageResource(R.drawable.ic_action_playback_repeat);
                 break;
-            case PlayUtils.MUSIC_REPEAT_ONE:
+            case AppContext.MUSIC_REPEAT_ONE:
                 T.showShort(getApplicationContext(),"切换到单曲循环");
                 mAddFAB.setImageResource(R.drawable.ic_action_playback_repeat_1);
                 break;
-            case PlayUtils.MUSIC_RANDOM:
+            case AppContext.MUSIC_RANDOM:
                 T.showShort(getApplicationContext(),"切换到随机播放");
                 mAddFAB.setImageResource(R.drawable.ic_action_playback_schuffle);
                 break;

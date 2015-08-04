@@ -1,15 +1,13 @@
 package com.zero.mp3.service;
 
+import android.app.Service;
 import android.content.Intent;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.IBinder;
 
 import com.zero.mp3.Utils.L;
-import com.zero.mp3.Utils.PlayUtils;
-import com.zero.mp3.Utils.T;
 import com.zero.mp3.app.AppContext;
-import android.app.Service;
 /**
  * 播放音乐的服务
  * Created by zero on 15-8-2.
@@ -26,13 +24,6 @@ public class PlayService extends Service {
 
     private int mPlayCode; //从Activity传递来的指令
 
-    public PlayService(){
-
-        mMediaPlayer = new MediaPlayer();
-       // isPause = false;
-        L.d(TAG);
-    }
-
     @Override
     public IBinder onBind(Intent intent) {
         return null;
@@ -41,7 +32,9 @@ public class PlayService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        mMediaPlayer = new MediaPlayer();
         mPausePosition = 0;
+        L.d(TAG);
     }
 
     @Override
@@ -55,6 +48,7 @@ public class PlayService extends Service {
         mPlayCode = intent.getIntExtra("MSG", 0);
 
         L.d(TAG,"code :"+mPlayCode);
+
         doPlayAction(mPlayCode);
 
         return super.onStartCommand(intent, flags, startId);
@@ -69,6 +63,8 @@ public class PlayService extends Service {
             mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC); //音频流类型
 
             mMediaPlayer.prepareAsync(); //异步加载流媒体
+
+            mMediaPlayer.setLooping(true); //默认单曲循环
 
             mMediaPlayer.setOnPreparedListener(new PreparedListener(position));
 
@@ -90,12 +86,14 @@ public class PlayService extends Service {
 
     public void stop(){
         if(mMediaPlayer != null) {
+
             mMediaPlayer.stop();
             try {
                 mMediaPlayer.prepare(); // 在调用stop后如果需要再次通过start进行播放,需要之前调用prepare函数
             } catch (Exception e) {
                 e.printStackTrace();
             }
+            L.d(TAG,"action stop()");
         }
     }
 
@@ -144,12 +142,12 @@ public class PlayService extends Service {
         @Override
         public void onCompletion(MediaPlayer mp) {
             switch (code){
-                case PlayUtils.MUSIC_REPEAT:
+                case AppContext.MUSIC_REPEAT:
                     play(0);
                     break;
-                case PlayUtils.MUSIC_REPEAT_ONE:
+                case AppContext.MUSIC_REPEAT_ONE:
                     break;
-                case PlayUtils.MUSIC_RANDOM:
+                case AppContext.MUSIC_RANDOM:
                     break;
             }
         }
