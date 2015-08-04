@@ -18,6 +18,7 @@ import android.widget.TextView;
 import com.melnykov.fab.FloatingActionButton;
 import com.zero.mp3.R;
 import com.zero.mp3.Utils.L;
+import com.zero.mp3.Utils.PlayUtils;
 import com.zero.mp3.Utils.T;
 import com.zero.mp3.adapter.MusicListAdapter;
 import com.zero.mp3.app.AppContext;
@@ -39,12 +40,11 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
     private MusicListAdapter mAdapter;
     private boolean isPlaying;
 
-    private static final int MUSIC_REPEAT = 0 ;
-    private static final int MUSIC_REPEAT_ONE = 1;
-    private static final int MUSIC_RANDOM = 2;
+    private int mMusicCode; //播放模式
 
-    private int mMusicCode;
+    private int currentMusicId; //当前播放歌曲的序号
 
+    //暂时存储音乐路径
     private String url="";
 
     @Bind(R.id.toolbar)
@@ -84,7 +84,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
-        L.d(TAG);
+        L.d(TAG,TAG);
         initData();
         initToolBar();
         mMusicListView.setAdapter(mAdapter);
@@ -103,7 +103,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
 
     public void initData(){
         isPlaying = false;
-        mMusicCode = MUSIC_REPEAT;
+        mMusicCode = PlayUtils.MUSIC_REPEAT;
 //        add_fab.attachToListView(mMusicListView);
         mMusics = new ArrayList<>();
         mAdapter = new MusicListAdapter(this,mMusics);
@@ -164,14 +164,15 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         final Music music = mMusics.get(position);
         url = music.getUrl();
-        Intent intent = new Intent(this,PlayService.class);
-        intent.putExtra("url",url);
-        L.d(TAG, music.getUrl());
-        intent.putExtra("MSG", AppContext.MUSIC_PLAY);
-        L.d(TAG, AppContext.MUSIC_PLAY + "");
-        startService(intent);
+
+        currentMusicId = position;
+
+        L.d(TAG,"id="+currentMusicId);
+
+        PlayUtils.playMusicIntent(this,url,AppContext.MUSIC_PLAY);
 
         setBottomDisplay(music.getTitle(), music.getAirtist());
+
         mPlayIv.setImageResource(R.drawable.ic_action_playback_play);
         mBottomName.setFocusable(true);
         mBottomName.setFocusableInTouchMode(true);
@@ -200,31 +201,32 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
         }
     }
 
+    /**
+     * 在底部设置正在播放的曲名与作者
+     * @param title
+     * @param artist
+     */
     public void setBottomDisplay(String title,String artist){
         mBottomTitle.setText(title);
         mBottomName.setText(artist);
     }
 
     /**
-     * 绑定播放键事件
+     * 绑定播放键事件（暂停）
      */
     @OnClick(R.id.music_function_play_iv)
     public void playMusic(){
         if (isPlaying)
         {
-            Intent intent = new Intent(this,PlayService.class);
-            intent.putExtra("url",url);
-            intent.putExtra("MSG", AppContext.MUSIC_PAUSE);
-            startService(intent);
+            PlayUtils.playMusicIntent(this,url,AppContext.MUSIC_PAUSE);
+            L.d(TAG,"Send to service:pause");
             mPlayIv.setImageResource(R.drawable.ic_action_playback_pause);
             mBottomName.setFocusable(false);
             mBottomName.setFocusableInTouchMode(false);
             isPlaying= false;
         }else{
-            Intent intent = new Intent(this,PlayService.class);
-            intent.putExtra("url",url);
-            intent.putExtra("MSG", AppContext.MUSIC_PLAY);
-            startService(intent);
+            PlayUtils.playMusicIntent(this,url,AppContext.MUSIC_PAUSE_TO_PLAY);
+            L.d(TAG, "Send to service:pauseToPlay");
             mPlayIv.setImageResource(R.drawable.ic_action_playback_play);
             mBottomName.setFocusable(true);
             mBottomName.setFocusableInTouchMode(true);
@@ -241,14 +243,29 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
         musicPlayMode(mMusicCode);
     }
 
+    //下一曲
     @OnClick(R.id.music_function_next_iv)
     public void nextMusic(){
         T.showShort(this,"next music");
+        currentMusicId = (currentMusicId + 1) % mMusics.size();
+        url = mMusics.get(currentMusicId).getUrl();
+        PlayUtils.playMusicIntent(this, url, AppContext.MUSIC_PLAY);
+        setBottomDisplay(mMusics.get(currentMusicId).getTitle(), mMusics.get(currentMusicId).getAirtist());
+        L.d(TAG,"nextId:" + currentMusicId);
     }
 
+    //上一曲
     @OnClick(R.id.music_function_previous_iv)
     public void previousMusic(){
         T.showShort(this, "prev music");
+        currentMusicId = (currentMusicId - 1) % mMusics.size();
+        if (currentMusicId == -1){
+            currentMusicId = mMusics.size()-1;
+        }
+        url = mMusics.get(currentMusicId).getUrl();
+        PlayUtils.playMusicIntent(this, url, AppContext.MUSIC_PLAY);
+        setBottomDisplay(mMusics.get(currentMusicId).getTitle(), mMusics.get(currentMusicId).getAirtist());
+        L.d(TAG, "previousId:" + currentMusicId );
     }
 
     private Toolbar.OnMenuItemClickListener onMenuItemClick = new Toolbar.OnMenuItemClickListener() {
@@ -272,15 +289,15 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
      */
     private void musicPlayMode(int code){
         switch (code){
-            case MUSIC_REPEAT:
+            case PlayUtils.MUSIC_REPEAT:
                 T.showShort(getApplicationContext(),"切换到列表循环");
                 mAddFAB.setImageResource(R.drawable.ic_action_playback_repeat);
                 break;
-            case MUSIC_REPEAT_ONE:
+            case PlayUtils.MUSIC_REPEAT_ONE:
                 T.showShort(getApplicationContext(),"切换到单曲循环");
                 mAddFAB.setImageResource(R.drawable.ic_action_playback_repeat_1);
                 break;
-            case MUSIC_RANDOM:
+            case PlayUtils.MUSIC_RANDOM:
                 T.showShort(getApplicationContext(),"切换到随机播放");
                 mAddFAB.setImageResource(R.drawable.ic_action_playback_schuffle);
                 break;

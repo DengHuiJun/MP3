@@ -8,4 +8,6 @@ public class AppContext {
     public static final int MUSIC_PLAY = 1;
     public static final int MUSIC_PAUSE = 2;
     public static final int MUSIC_STOP = 3;
+
+    public static final int MUSIC_PAUSE_TO_PLAY = 4;
 }

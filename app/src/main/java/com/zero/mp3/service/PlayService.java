@@ -1,10 +1,13 @@
 package com.zero.mp3.service;
 
 import android.content.Intent;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.IBinder;
 
 import com.zero.mp3.Utils.L;
+import com.zero.mp3.Utils.PlayUtils;
+import com.zero.mp3.Utils.T;
 import com.zero.mp3.app.AppContext;
 import android.app.Service;
 /**
@@ -15,14 +18,18 @@ public class PlayService extends Service {
 
     private final static String TAG = "PlayService";
 
-    private MediaPlayer mediaPlayer;
-    private String musicPath;
-    private boolean isPause;
+    private MediaPlayer mMediaPlayer;
+
+    private String mMusicPath;
+
+    private int mPausePosition; //记录停顿的时间
+
+    private int mPlayCode; //从Activity传递来的指令
 
     public PlayService(){
 
-        mediaPlayer = new MediaPlayer();
-        isPause = false;
+        mMediaPlayer = new MediaPlayer();
+       // isPause = false;
         L.d(TAG);
     }
 
@@ -32,30 +39,49 @@ public class PlayService extends Service {
     }
 
     @Override
+    public void onCreate() {
+        super.onCreate();
+        mPausePosition = 0;
+    }
+
+    @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
-        if(mediaPlayer.isPlaying()) {
+        if(mMediaPlayer.isPlaying()) {
             stop();
         }
-        musicPath = intent.getStringExtra("url");
-        int msg = intent.getIntExtra("MSG", 0);
-        if(msg == AppContext.MUSIC_PLAY) {
-            play(0);
-        } else if(msg == AppContext.MUSIC_PAUSE) {
-            pause();
-        } else if(msg == AppContext.MUSIC_STOP) {
-            stop();
-        }
+
+        mMusicPath = intent.getStringExtra("url");
+        mPlayCode = intent.getIntExtra("MSG", 0);
+
+        L.d(TAG,"code :"+mPlayCode);
+        doPlayAction(mPlayCode);
 
         return super.onStartCommand(intent, flags, startId);
     }
 
     public void play(int position){
         try {
-            mediaPlayer.reset();//把各项参数恢复到初始状态
-            mediaPlayer.setDataSource(musicPath);
-            mediaPlayer.prepare();  //进行缓冲
-            mediaPlayer.setOnPreparedListener(new PreparedListener(position));//注册一个监听器
+            mMediaPlayer.reset();//把各项参数恢复到初始状态
+
+            mMediaPlayer.setDataSource(mMusicPath);
+
+            mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC); //音频流类型
+
+            mMediaPlayer.prepareAsync(); //异步加载流媒体
+
+            mMediaPlayer.setOnPreparedListener(new PreparedListener(position));
+
+            mMediaPlayer.setOnCompletionListener(new CompletionListener(mPlayCode));
+
+            mMediaPlayer.setOnErrorListener(new MediaPlayer.OnErrorListener() {
+                @Override
+                public boolean onError(MediaPlayer mp, int what, int extra) {
+                   // T.showShort(getApplicationContext(),"播放出错！");
+                    L.d(TAG,"MediaPlayer  ERROR!");
+                    return false;
+                }
+            });
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -63,10 +89,10 @@ public class PlayService extends Service {
     }
 
     public void stop(){
-        if(mediaPlayer != null) {
-            mediaPlayer.stop();
+        if(mMediaPlayer != null) {
+            mMediaPlayer.stop();
             try {
-                mediaPlayer.prepare(); // 在调用stop后如果需要再次通过start进行播放,需要之前调用prepare函数
+                mMediaPlayer.prepare(); // 在调用stop后如果需要再次通过start进行播放,需要之前调用prepare函数
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -74,10 +100,13 @@ public class PlayService extends Service {
     }
 
     public void pause(){
-        if (mediaPlayer != null && mediaPlayer.isPlaying()) {
-            mediaPlayer.pause();
-            isPause = true;
-        }
+            L.d(TAG,mMediaPlayer.isPlaying()+"boolean");
+//        if (mMediaPlayer != null && mMediaPlayer.isPlaying()) {
+            mMediaPlayer.pause();
+            mPausePosition =  mMediaPlayer.getCurrentPosition();
+            L.d(TAG,"action pause()："+mPausePosition);
+//        }
+
     }
 
     /**
@@ -85,8 +114,9 @@ public class PlayService extends Service {
      * 实现一个OnPrepareLister接口,当音乐准备好的时候开始播放
      *
      */
-    private final class PreparedListener implements MediaPlayer.OnPreparedListener {
-        private int positon;
+    private class PreparedListener implements MediaPlayer.OnPreparedListener {
+
+        private int positon;  //播放的位置
 
         public PreparedListener(int positon) {
             this.positon = positon;
@@ -94,10 +124,67 @@ public class PlayService extends Service {
 
         @Override
         public void onPrepared(MediaPlayer mp) {
-            mediaPlayer.start();    //开始播放
+            mMediaPlayer.start();    //开始播放
             if(positon > 0) {    //如果音乐不是从头播放
-                mediaPlayer.seekTo(positon);
+                mMediaPlayer.seekTo(positon);
             }
         }
+    }
+
+    /**
+     * 一首歌播放完成后的监听事件
+     */
+    private class CompletionListener implements MediaPlayer.OnCompletionListener{
+        private int code;
+
+        public CompletionListener(int code){
+            this.code = code;
+        }
+
+        @Override
+        public void onCompletion(MediaPlayer mp) {
+            switch (code){
+                case PlayUtils.MUSIC_REPEAT:
+                    play(0);
+                    break;
+                case PlayUtils.MUSIC_REPEAT_ONE:
+                    break;
+                case PlayUtils.MUSIC_RANDOM:
+                    break;
+            }
+        }
+    }
+
+
+    private void doPlayAction(int code){
+        switch (code){
+            case AppContext.MUSIC_PLAY:
+                play(0);
+                break;
+            case AppContext.MUSIC_PAUSE:
+                pause();
+                break;
+            case AppContext.MUSIC_PAUSE_TO_PLAY:
+                play(mPausePosition);
+                break;
+        }
+    }
+
+    /**
+     * 释放及时资源
+     * @param mp
+     */
+    private void releaseMediePlay(MediaPlayer mp){
+        if (mp != null && mp.isPlaying())
+        {
+         mp.stop();
+         mp.release();
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        releaseMediePlay(mMediaPlayer);
     }
 }
