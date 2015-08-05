@@ -8,6 +8,7 @@ import android.os.IBinder;
 
 import com.zero.mp3.Utils.L;
 import com.zero.mp3.app.AppContext;
+
 /**
  * 播放音乐的服务
  * Created by zero on 15-8-2.
@@ -22,7 +23,11 @@ public class PlayService extends Service {
 
     private int mPausePosition; //记录停顿的时间
 
-    private int mPlayCode; //从Activity传递来的指令
+    private int mPlayCode; //从Activity传递来的播放指令
+
+    private int mMusicId; //播放音乐的序号
+
+    private boolean isPause; // 是否暂停
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -34,6 +39,8 @@ public class PlayService extends Service {
         super.onCreate();
         mMediaPlayer = new MediaPlayer();
         mPausePosition = 0;
+        mMusicId = 0; //默认等于0
+        isPause = false;
         L.d(TAG);
     }
 
@@ -44,18 +51,24 @@ public class PlayService extends Service {
             stop();
         }
 
+        mMusicId = intent.getIntExtra("id",0);
+
         mMusicPath = intent.getStringExtra("url");
+
         mPlayCode = intent.getIntExtra("MSG", 0);
 
         L.d(TAG,"code :"+mPlayCode);
 
-        doPlayAction(mPlayCode);
+        doPlayAction(mPlayCode,intent);
 
         return super.onStartCommand(intent, flags, startId);
     }
 
     public void play(int position){
         try {
+
+            isPause = false;
+
             mMediaPlayer.reset();//把各项参数恢复到初始状态
 
             mMediaPlayer.setDataSource(mMusicPath);
@@ -64,11 +77,9 @@ public class PlayService extends Service {
 
             mMediaPlayer.prepareAsync(); //异步加载流媒体
 
-            mMediaPlayer.setLooping(true); //默认单曲循环
-
             mMediaPlayer.setOnPreparedListener(new PreparedListener(position));
 
-            mMediaPlayer.setOnCompletionListener(new CompletionListener(mPlayCode));
+            mMediaPlayer.setOnCompletionListener(new CompletionListener());
 
             mMediaPlayer.setOnErrorListener(new MediaPlayer.OnErrorListener() {
                 @Override
@@ -102,6 +113,7 @@ public class PlayService extends Service {
 //        if (mMediaPlayer != null && mMediaPlayer.isPlaying()) {
             mMediaPlayer.pause();
             mPausePosition =  mMediaPlayer.getCurrentPosition();
+            isPause = true;
             L.d(TAG,"action pause()："+mPausePosition);
 //        }
 
@@ -133,28 +145,20 @@ public class PlayService extends Service {
      * 一首歌播放完成后的监听事件
      */
     private class CompletionListener implements MediaPlayer.OnCompletionListener{
-        private int code;
 
-        public CompletionListener(int code){
-            this.code = code;
+        public CompletionListener(){
+
         }
 
         @Override
         public void onCompletion(MediaPlayer mp) {
-            switch (code){
-                case AppContext.MUSIC_REPEAT:
-                    play(0);
-                    break;
-                case AppContext.MUSIC_REPEAT_ONE:
-                    break;
-                case AppContext.MUSIC_RANDOM:
-                    break;
-            }
+            L.d(TAG,"播放完成调用");
+            sendPlayOverMessage();
         }
     }
 
 
-    private void doPlayAction(int code){
+    private void doPlayAction(int code,Intent intent){
         switch (code){
             case AppContext.MUSIC_PLAY:
                 play(0);
@@ -169,6 +173,17 @@ public class PlayService extends Service {
     }
 
     /**
+     * 发送一个广播，当前音乐播放完成,传递歌曲的序号
+     */
+    private void sendPlayOverMessage(){
+        Intent intent = new Intent(AppContext.SEND_BROADCASR_ACTION);
+        intent.putExtra("musicId",mMusicId);
+        intent.putExtra("isPause",isPause);
+        sendBroadcast(intent);
+        L.d(TAG,"sendMessage");
+    }
+
+    /**
      * 释放及时资源
      * @param mp
      */
@@ -179,6 +194,7 @@ public class PlayService extends Service {
          mp.release();
         }
     }
+
 
     @Override
     public void onDestroy() {

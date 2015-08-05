@@ -16,8 +16,9 @@ public class PlayUtils {
      * @param url
      * @param code
      */
-    public static void playMusicIntent(Context c,String url,int code){
+    public static void playMusicIntent(Context c,int id,String url,int code){
         Intent intent = new Intent(c,PlayService.class);
+        intent.putExtra("id",id);
         intent.putExtra("url",url);
         intent.putExtra("MSG", code);
         c.startService(intent);

@@ -1,10 +1,13 @@
 package com.zero.mp3.beans;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
 /**
- * 音乐类
+ * 音乐类，展示如何实现Parcelable
  * Created by zero on 15-8-2.
  */
-public class Music {
+public class Music implements Parcelable{
     private long id;  // 音乐Id
     private String title; //歌曲名
     private String airtist; //歌手名
@@ -58,5 +61,45 @@ public class Music {
 
     public void setUrl(String url) {
         this.url = url;
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeLong(id);
+        dest.writeString(title);
+        dest.writeString(airtist);
+        dest.writeLong(duration);
+        dest.writeLong(size);
+        dest.writeString(url);
+    }
+
+    public static final Parcelable.Creator<Music> CREATOR = new Creator<Music>() {
+        @Override
+        public Music createFromParcel(Parcel source) {
+            return new Music(source);
+        }
+
+        @Override
+        public Music[] newArray(int size) {
+            return new Music[size];
+        }
+    };
+
+    public Music(Parcel in){
+        id = in.readLong();
+        title = in.readString();
+        airtist = in.readString();
+        duration = in.readLong();
+        size = in.readLong();
+        url = in.readString();
+    }
+
+    public Music(){
+
     }
 }

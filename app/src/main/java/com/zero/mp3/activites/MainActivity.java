@@ -1,6 +1,9 @@
 package com.zero.mp3.activites;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.database.Cursor;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -23,7 +26,6 @@ import com.zero.mp3.Utils.T;
 import com.zero.mp3.adapter.MusicListAdapter;
 import com.zero.mp3.app.AppContext;
 import com.zero.mp3.beans.Music;
-import com.zero.mp3.service.PlayService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,8 +46,9 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
 
     private int currentMusicId; //当前播放歌曲的序号
 
-    //暂时存储音乐路径
-    private String url="";
+    private String url="";//暂时存储音乐路径
+
+    private MusicBroadcastReceiver mBroadcastReceiver;
 
     @Bind(R.id.toolbar)
     Toolbar mToolbar;
@@ -84,13 +87,21 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
-        L.d(TAG,TAG);
+        L.d(TAG, TAG);
+        initReceiver();
         initData();
         initToolBar();
         mMusicListView.setAdapter(mAdapter);
         mMusicListView.setOnItemClickListener(this);
         new getMusicTask().execute();
 
+    }
+
+    private void initReceiver() {
+        mBroadcastReceiver = new MusicBroadcastReceiver();
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(AppContext.SEND_BROADCASR_ACTION);
+        registerReceiver(mBroadcastReceiver,filter);
     }
 
     private void initToolBar() {
@@ -104,18 +115,18 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
     public void initData(){
         isPlaying = false;
         mMusicCode = AppContext.MUSIC_REPEAT;
-//        add_fab.attachToListView(mMusicListView);
+//        add_fab.attachToListView(mMusicListView);  //贴上ListView，使得滑动隐藏按钮
         mMusics = new ArrayList<>();
         mAdapter = new MusicListAdapter(this,mMusics);
     }
 
-    /**
-     * 更新音乐列表
-     */
-    public void refreshData(){
-        mUpdatePBar.setVisibility(View.VISIBLE);
-        new getMusicTask().execute();
-    }
+//    /**
+//     * 更新音乐列表
+//     */
+//    public void refreshData(){
+//        mUpdatePBar.setVisibility(View.VISIBLE);
+//        new getMusicTask().execute();
+//    }
 
     /**
      * 从内存卡中读取音乐列表
@@ -169,7 +180,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
 
         L.d(TAG,"id="+currentMusicId);
 
-        PlayUtils.playMusicIntent(this,url,AppContext.MUSIC_PLAY);
+        PlayUtils.playMusicIntent(this,currentMusicId,url,AppContext.MUSIC_PLAY);
 
         setBottomDisplay(music.getTitle(), music.getAirtist());
 
@@ -198,6 +209,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
             mAdapter.setmData(mMusics);
             mAdapter.notifyDataSetChanged();
             mUpdatePBar.setVisibility(View.GONE);
+            setBottomDisplay(mMusics.get(0).getTitle(),mMusics.get(0).getAirtist());
         }
     }
 
@@ -218,14 +230,14 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
     public void playMusic(){
         if (isPlaying)
         {
-            PlayUtils.playMusicIntent(this,url,AppContext.MUSIC_PAUSE);
+            PlayUtils.playMusicIntent(this,currentMusicId,url,AppContext.MUSIC_PAUSE);
             L.d(TAG,"Send to service:pause");
             mPlayIv.setImageResource(R.drawable.ic_action_playback_pause);
             mBottomName.setFocusable(false);
             mBottomName.setFocusableInTouchMode(false);
             isPlaying= false;
         }else{
-            PlayUtils.playMusicIntent(this,url,AppContext.MUSIC_PAUSE_TO_PLAY);
+            PlayUtils.playMusicIntent(this,currentMusicId,url,AppContext.MUSIC_PAUSE_TO_PLAY);
             L.d(TAG, "Send to service:pauseToPlay");
             mPlayIv.setImageResource(R.drawable.ic_action_playback_play);
             mBottomName.setFocusable(true);
@@ -241,15 +253,16 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
     public void setPlayMode(){
         mMusicCode = (mMusicCode+1) % 3;
         musicPlayMode(mMusicCode);
+
     }
 
     //下一曲
     @OnClick(R.id.music_function_next_iv)
     public void nextMusic(){
-        T.showShort(this,"next music");
+       // T.showShort(this,"next music");
         currentMusicId = (currentMusicId + 1) % mMusics.size();
         url = mMusics.get(currentMusicId).getUrl();
-        PlayUtils.playMusicIntent(this, url, AppContext.MUSIC_PLAY);
+        PlayUtils.playMusicIntent(this, currentMusicId,url, AppContext.MUSIC_PLAY);
         setBottomDisplay(mMusics.get(currentMusicId).getTitle(), mMusics.get(currentMusicId).getAirtist());
         L.d(TAG,"nextId:" + currentMusicId);
     }
@@ -263,7 +276,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
             currentMusicId = mMusics.size()-1;
         }
         url = mMusics.get(currentMusicId).getUrl();
-        PlayUtils.playMusicIntent(this, url, AppContext.MUSIC_PLAY);
+        PlayUtils.playMusicIntent(this, currentMusicId,url, AppContext.MUSIC_PLAY);
         setBottomDisplay(mMusics.get(currentMusicId).getTitle(), mMusics.get(currentMusicId).getAirtist());
         L.d(TAG, "previousId:" + currentMusicId );
     }
@@ -291,14 +304,17 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
         switch (code){
             case AppContext.MUSIC_REPEAT:
                 T.showShort(getApplicationContext(),"切换到列表循环");
+                mMusicCode = AppContext.MUSIC_REPEAT;
                 mAddFAB.setImageResource(R.drawable.ic_action_playback_repeat);
                 break;
             case AppContext.MUSIC_REPEAT_ONE:
                 T.showShort(getApplicationContext(),"切换到单曲循环");
+                mMusicCode = AppContext.MUSIC_REPEAT_ONE;
                 mAddFAB.setImageResource(R.drawable.ic_action_playback_repeat_1);
                 break;
             case AppContext.MUSIC_RANDOM:
                 T.showShort(getApplicationContext(),"切换到随机播放");
+                mMusicCode = AppContext.MUSIC_RANDOM;
                 mAddFAB.setImageResource(R.drawable.ic_action_playback_schuffle);
                 break;
         }
@@ -306,7 +322,60 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
         ButterKnife.unbind(this);
+        unregisterReceiver(mBroadcastReceiver);
+        super.onDestroy();
+    }
+
+    /**
+     * 广播接收器，用来监听音乐的播放情况
+     */
+    public class  MusicBroadcastReceiver extends BroadcastReceiver{
+
+        public MusicBroadcastReceiver(){
+        }
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            int id = intent.getIntExtra("musicId",0);
+            boolean isPause = intent.getBooleanExtra("isPause", true);
+
+            L.d(TAG,"Receive id :"+id);
+
+            if (isPause){
+            }
+            else
+            {
+                switch (mMusicCode) {
+                    case AppContext.MUSIC_REPEAT:
+                        currentMusicId = id;
+                        nextMusic();
+                        break;
+                    case AppContext.MUSIC_REPEAT_ONE:
+                        currentMusicId = id;
+                        url = mMusics.get(currentMusicId).getUrl();
+                        PlayUtils.playMusicIntent(MainActivity.this,id,url, AppContext.MUSIC_PLAY);
+                        setBottomDisplay(mMusics.get(currentMusicId).getTitle(), mMusics.get(currentMusicId).getAirtist());
+                        break;
+                    case AppContext.MUSIC_RANDOM:
+                        currentMusicId = getRandomId(mMusics.size());
+                        url = mMusics.get(currentMusicId).getUrl();
+                        PlayUtils.playMusicIntent(MainActivity.this,id,url, AppContext.MUSIC_PLAY);
+                        setBottomDisplay(mMusics.get(currentMusicId).getTitle(), mMusics.get(currentMusicId).getAirtist());
+                        break;
+                }
+            }
+
+        }
+    }
+
+    /**
+     * 获取随机数
+     * @param length
+     * @return
+     */
+    public int getRandomId(int length){
+        return (int)(Math.random()*1000)%length;
     }
 }
