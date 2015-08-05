@@ -6,9 +6,11 @@
 3.  列表循环播放，随机播放，单曲循环。 
 
 ## 依赖的第三方库
-  > compile 'com.jakewharton:butterknife:7.0.1'
-  > compile 'com.melnykov:floatingactionbutton:1.3.0'
+  > compile 'com.jakewharton:butterknife:7.0.1'  
   
+  > compile 'com.melnykov:floatingactionbutton:1.3.0'
+
+## 体验包 http://7rf25q.com1.z0.glb.clouddn.com/ZeroMP3.apk 
   
 ## 目前效果  (MX4上的截图)
 ![效果图](http://7xjung.com1.z0.glb.clouddn.com/zeromp3.jpg)
