@@ -26,14 +26,14 @@
     <FrameLayout
         android:layout_below="@+id/toolbar"
         android:id="@+id/list_content"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:layout_above="@+id/divider_line">
 
         <ListView
             android:id="@+id/music_list_lv"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:dividerHeight="1px"
             android:divider="@color/SILVER"
             android:background="@color/primary"
@@ -56,18 +56,59 @@
         android:id="@+id/divider_line"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:layout_above="@+id/main_bottom_rl"
+        android:layout_above="@+id/main_bottom_ll"
         android:background="@color/black"
         />
 
+    <LinearLayout
+        android:id="@+id/main_bottom_ll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:background="@color/white"
+        android:orientation="vertical"
+        >
+    <LinearLayout
+        android:id="@+id/main_bottom_timer_ll"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/main_bottom_timer_left"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:textColor="@color/black"
+            android:gravity="center"
+            android:text="03:33" />
+
+        <TextView
+            android:id="@+id/test"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="4"
+            android:background="#00ff00"/>
+
+        <TextView
+            android:id="@+id/main_bottom_timer_right"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:textColor="@color/black"
+            android:gravity="center"
+            android:text="04:21" />
+
+    </LinearLayout>
+
     <RelativeLayout
         android:id="@+id/main_bottom_rl"
-        android:layout_alignParentBottom="true"
         android:layout_width="match_parent"
         android:layout_height="60dp"
         android:paddingLeft="10dp"
         android:paddingRight="16dp"
-        android:background="@color/white">
+        >
 
         <ImageView
             android:id="@+id/music_photo_iv"
@@ -79,6 +120,7 @@
 
 
         <LinearLayout
+            android:id="@+id/music_show_ll"
             android:layout_toRightOf="@+id/music_photo_iv"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
@@ -137,5 +179,7 @@
             android:src="@drawable/ic_action_playback_prev"/>
 
     </RelativeLayout>
+
+    </LinearLayout>
 
 </RelativeLayout>

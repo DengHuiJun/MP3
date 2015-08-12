@@ -82,17 +82,22 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
     @Bind(R.id.add_fab)
     FloatingActionButton mAddFAB;
 
+    @Bind(R.id.main_bottom_timer_ll)
+    View mBottomTimerLl;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
         L.d(TAG, TAG);
+
         initReceiver();
         initData();
         initToolBar();
         mMusicListView.setAdapter(mAdapter);
         mMusicListView.setOnItemClickListener(this);
+
         new getMusicTask().execute();
 
     }
@@ -112,7 +117,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
         mToolbar.setOnMenuItemClickListener(onMenuItemClick);
     }
 
-    public void initData(){
+    public void initData() {
         isPlaying = false;
         mMusicCode = AppContext.MUSIC_REPEAT;
 //        add_fab.attachToListView(mMusicListView);  //贴上ListView，使得滑动隐藏按钮
@@ -132,14 +137,13 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
      * 从内存卡中读取音乐列表
      * @return
      */
-    public List<Music> getData(){
+    public List<Music> getData() {
         Cursor cursor = getContentResolver().query(
                 MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, null, null, null,
                 MediaStore.Audio.Media.DEFAULT_SORT_ORDER);
         List<Music> musics = new ArrayList<>();
 
-        for (int i = 0; i < cursor.getCount(); i++)
-        {
+        for (int i = 0; i < cursor.getCount(); i++) {
             Music music = new Music();
             cursor.moveToNext();
             long id = cursor.getLong(cursor
@@ -157,8 +161,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
             int isMusic = cursor.getInt(cursor
                     .getColumnIndex(MediaStore.Audio.Media.IS_MUSIC));//是否为音乐
 
-            if (isMusic != 0 )
-            {
+            if (isMusic != 0 ) {
                 music.setId(id);
                 music.setTitle(title);
                 music.setAirtist(artist);
@@ -193,7 +196,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
     /**
      * 从数据库读取音乐的任务
      */
-    private class  getMusicTask extends AsyncTask<Void,Void,Void>{
+    private class  getMusicTask extends AsyncTask<Void,Void,Void> {
 
         @Override
         protected Void doInBackground(Void... params) {
@@ -206,6 +209,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
             L.d(TAG, "onPostExecute");
+
             mAdapter.setmData(mMusics);
             mAdapter.notifyDataSetChanged();
             mUpdatePBar.setVisibility(View.GONE);
@@ -218,7 +222,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
      * @param title
      * @param artist
      */
-    public void setBottomDisplay(String title,String artist){
+    public void setBottomDisplay(String title,String artist) {
         mBottomTitle.setText(title);
         mBottomName.setText(artist);
     }
@@ -227,7 +231,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
      * 绑定播放键事件（暂停）
      */
     @OnClick(R.id.music_function_play_iv)
-    public void playMusic(){
+    public void playMusic() {
         if (isPlaying)
         {
             PlayUtils.playMusicIntent(this,currentMusicId,url,AppContext.MUSIC_PAUSE);
@@ -250,7 +254,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
      * 绑定添加事件【最后考虑为歌曲播放模式，循环或者随机】
      */
     @OnClick(R.id.add_fab)
-    public void setPlayMode(){
+    public void setPlayMode() {
         mMusicCode = (mMusicCode+1) % 3;
         musicPlayMode(mMusicCode);
 
@@ -258,7 +262,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
 
     //下一曲
     @OnClick(R.id.music_function_next_iv)
-    public void nextMusic(){
+    public void nextMusic() {
        // T.showShort(this,"next music");
         currentMusicId = (currentMusicId + 1) % mMusics.size();
         url = mMusics.get(currentMusicId).getUrl();
@@ -269,7 +273,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
 
     //上一曲
     @OnClick(R.id.music_function_previous_iv)
-    public void previousMusic(){
+    public void previousMusic() {
         T.showShort(this, "prev music");
         currentMusicId = (currentMusicId - 1) % mMusics.size();
         if (currentMusicId == -1){
@@ -279,6 +283,15 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
         PlayUtils.playMusicIntent(this, currentMusicId,url, AppContext.MUSIC_PLAY);
         setBottomDisplay(mMusics.get(currentMusicId).getTitle(), mMusics.get(currentMusicId).getAirtist());
         L.d(TAG, "previousId:" + currentMusicId );
+    }
+
+    @OnClick(R.id.music_show_ll)
+    public void showTimer() {
+        if (mBottomTimerLl.getVisibility() == View.VISIBLE) {
+            mBottomTimerLl.setVisibility(View.GONE);
+        } else {
+            mBottomTimerLl.setVisibility(View.VISIBLE);
+        }
     }
 
     private Toolbar.OnMenuItemClickListener onMenuItemClick = new Toolbar.OnMenuItemClickListener() {
@@ -300,7 +313,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
     /**
      * 音乐播放模式
      */
-    private void musicPlayMode(int code){
+    private void musicPlayMode(int code) {
         switch (code){
             case AppContext.MUSIC_REPEAT:
                 T.showShort(getApplicationContext(),"切换到列表循环");
@@ -332,7 +345,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
      */
     public class  MusicBroadcastReceiver extends BroadcastReceiver{
 
-        public MusicBroadcastReceiver(){
+        public MusicBroadcastReceiver() {
         }
 
         @Override
@@ -366,7 +379,6 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
                         break;
                 }
             }
-
         }
     }
 
