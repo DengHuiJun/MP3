@@ -61,7 +61,8 @@ public class PlayService extends Service {
 
         doPlayAction(mPlayCode,intent);
 
-        return super.onStartCommand(intent, flags, startId);
+        //用来防止service被后台kill
+        return START_STICKY;
     }
 
     public void play(int position){
