@@ -2,4 +2,6 @@
     <string name="app_name">极致MP3</string>
 
     <string name="action_search">搜索</string>
+
+    <string name="share_preferences_key">LastMusicUrl</string>
 </resources>
