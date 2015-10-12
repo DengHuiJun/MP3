@@ -1,12 +1,16 @@
 package com.zero.mp3.service;
 
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.IBinder;
 
+import com.zero.mp3.R;
 import com.zero.mp3.Utils.L;
+import com.zero.mp3.activites.MainActivity;
 import com.zero.mp3.app.AppContext;
 
 /**
@@ -41,7 +45,21 @@ public class PlayService extends Service {
         mPausePosition = 0;
         mMusicId = 0; //默认等于0
         isPause = false;
-        L.d(TAG);
+        showNotification();
+    }
+
+    /**
+     * 前台服务，防止被后台杀死
+     */
+    private void showNotification(){
+        Notification.Builder localBuilder = new Notification.Builder(this);
+        localBuilder.setContentIntent(PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class), 0));
+        localBuilder.setAutoCancel(false);
+        localBuilder.setSmallIcon(R.drawable.ic_app);
+        localBuilder.setTicker("Foreground Service Start");
+        localBuilder.setContentTitle("ZERO-极致音乐");
+        localBuilder.setContentText("正在播放歌曲");
+        startForeground(1, localBuilder.getNotification());
     }
 
     @Override
