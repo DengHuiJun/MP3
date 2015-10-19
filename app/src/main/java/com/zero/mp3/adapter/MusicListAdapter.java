@@ -1,13 +1,18 @@
 package com.zero.mp3.adapter;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
+import android.widget.SectionIndexer;
 import android.widget.TextView;
 
 import com.zero.mp3.R;
+import com.zero.mp3.Utils.FirstLetterUtil;
+import com.zero.mp3.Utils.StringMatcher;
 import com.zero.mp3.beans.Music;
 
 import java.util.List;
@@ -16,10 +21,11 @@ import java.util.List;
  * 适配器类，用来适配主界面音乐列表的ListView
  * Created by zero on 15-8-2.
  */
-public class MusicListAdapter extends BaseAdapter {
+public class MusicListAdapter extends BaseAdapter implements SectionIndexer{
     private List<Music>  mData;
     private Context context;
     private LayoutInflater inflater;
+    private String mSections = "#ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 
     public MusicListAdapter(Context context,List<Music>  mData){
@@ -38,8 +44,8 @@ public class MusicListAdapter extends BaseAdapter {
     }
 
     @Override
-    public Object getItem(int position) {
-        return mData.get(position);
+    public String getItem(int position) {
+        return mData.get(position).getTitle();
     }
 
     @Override
@@ -105,5 +111,58 @@ public class MusicListAdapter extends BaseAdapter {
         }
         return d;
     }
+
+    @Override
+    public int getPositionForSection(int section) {
+        // If there is no item for current section, previous section will be selected
+        for (int i = section; i >= 0; i--) {
+            for (int j = 0; j < getCount(); j++) {
+                if (i == 0) {
+                    // For numeric section
+                    for (int k = 0; k <= 9; k++) {
+                        if (StringMatcher.match(hanziToPinyin(getItem(j).substring(0,1)), String.valueOf(k)))
+                            return j;
+                    }
+                } else {
+                    if (StringMatcher.match(hanziToPinyin(getItem(j).substring(0,1)), String.valueOf(mSections.charAt(i))))
+                        return j;
+                }
+            }
+        }
+        return 0;
+    }
+
+    @Override
+    public int getSectionForPosition(int position) {
+        return 0;
+    }
+
+    @Override
+    public Object[] getSections() {
+        String[] sections = new String[mSections.length()];
+        for (int i = 0; i < mSections.length(); i++)
+            sections[i] = String.valueOf(mSections.charAt(i));
+        return sections;
+    }
+
+    @SuppressLint("DefaultLocale")
+    private String hanziToPinyin(String input) {
+        if (input.length() > 1) {
+            input = input.substring(0,1);
+        }
+
+        String pinYinCode = FirstLetterUtil.getFirstLetter(input);
+
+        if (pinYinCode != null) {
+            if (pinYinCode.length() > 1) {
+                pinYinCode = pinYinCode.substring(0, 1);
+            }
+        } else {
+            pinYinCode = "";
+        }
+
+        return pinYinCode.toUpperCase();
+    }
+
 
 }

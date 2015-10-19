@@ -1,5 +1,6 @@
 package com.zero.mp3.activites;
 
+import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -7,28 +8,38 @@ import android.content.IntentFilter;
 import android.database.Cursor;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Debug;
 import android.provider.MediaStore;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.TextUtils;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.ProgressBar;
+import android.widget.SectionIndexer;
 import android.widget.TextView;
 
 import com.melnykov.fab.FloatingActionButton;
 import com.zero.mp3.R;
+import com.zero.mp3.Utils.FirstLetterUtil;
 import com.zero.mp3.Utils.L;
 import com.zero.mp3.Utils.PlayUtils;
+import com.zero.mp3.Utils.StringMatcher;
 import com.zero.mp3.Utils.T;
 import com.zero.mp3.adapter.MusicListAdapter;
 import com.zero.mp3.app.AppContext;
 import com.zero.mp3.beans.Music;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import butterknife.Bind;
 import butterknife.ButterKnife;
@@ -41,6 +52,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
     private List<Music> mMusics;
     private MusicListAdapter mAdapter;
     private boolean isPlaying;
+    private Map<String, String> multPronounceMap = new HashMap<>();
 
     private int mMusicCode; //播放模式
 
@@ -50,41 +62,32 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
 
     private MusicBroadcastReceiver mBroadcastReceiver;
 
-    @Bind(R.id.toolbar)
-    Toolbar mToolbar;
+    @Bind(R.id.toolbar) Toolbar mToolbar;
 
     //加载音乐的进度条
-    @Bind(R.id.update_music_pb)
-    ProgressBar mUpdatePBar;
+    @Bind(R.id.update_music_pb) ProgressBar mUpdatePBar;
 
-    @Bind(R.id.music_list_lv)
-    ListView mMusicListView;
+    //主列表
+    @Bind(R.id.music_list_lv) ListView mMusicListView;
 
     //下一曲
-    @Bind(R.id.music_function_next_iv)
-    ImageView mNextIv;
+    @Bind(R.id.music_function_next_iv) ImageView mNextIv;
 
     //播放或暂停
-    @Bind(R.id.music_function_play_iv)
-    ImageView mPlayIv;
+    @Bind(R.id.music_function_play_iv) ImageView mPlayIv;
 
     //上一曲
-    @Bind(R.id.music_function_previous_iv)
-    ImageView mPreviousIv;
+    @Bind(R.id.music_function_previous_iv) ImageView mPreviousIv;
 
     //底部显示歌曲名
-    @Bind(R.id.music_title_tv)
-    TextView mBottomTitle;
+    @Bind(R.id.music_title_tv) TextView mBottomTitle;
 
     //底部显示歌手名
-    @Bind(R.id.singer_name_tv)
-    TextView mBottomName;
+    @Bind(R.id.singer_name_tv) TextView mBottomName;
 
-    @Bind(R.id.add_fab)
-    FloatingActionButton mAddFAB;
+    @Bind(R.id.add_fab) FloatingActionButton mAddFAB;
 
-    @Bind(R.id.main_bottom_timer_ll)
-    View mBottomTimerLl;
+    @Bind(R.id.main_bottom_timer_ll) View mBottomTimerLl;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -115,7 +118,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
         mBroadcastReceiver = new MusicBroadcastReceiver();
         IntentFilter filter = new IntentFilter();
         filter.addAction(AppContext.SEND_BROADCASR_ACTION);
-        registerReceiver(mBroadcastReceiver,filter);
+        registerReceiver(mBroadcastReceiver, filter);
     }
 
     private void initToolBar() {
@@ -132,8 +135,9 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
 
         mMusics = new ArrayList<>();
         mAdapter = new MusicListAdapter(this, mMusics);
-
+        mAddFAB.attachToListView(mMusicListView);
         mMusicListView.setAdapter(mAdapter);
+        mMusicListView.setFastScrollEnabled(true);
 
         new getMusicTask().execute();
     }
@@ -225,6 +229,15 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
             super.onPostExecute(aVoid);
             L.d(TAG, "onPostExecute");
 
+            Collections.sort(mMusics, new Comparator<Music>() {
+                @Override
+                public int compare(Music lhs, Music rhs) {
+                    String l = hanziToPinyin(String.valueOf(lhs.getTitle().charAt(0)));
+                    String r = hanziToPinyin(String.valueOf(rhs.getTitle().charAt(0)));
+                    return   l.compareTo(r);
+                }
+            });
+
             mAdapter.setmData(mMusics);
             mAdapter.notifyDataSetChanged();
             mUpdatePBar.setVisibility(View.GONE);
@@ -251,6 +264,45 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
                 }
             }
         }
+    }
+
+    @SuppressLint("DefaultLocale")
+    private String hanziToPinyin(String input) {
+        if (input.length() > 1) {
+            input = input.substring(0,1);
+        }
+
+        String pinYinCode = FirstLetterUtil.getFirstLetter(input);
+
+        if (pinYinCode != null) {
+            if (pinYinCode.length() > 1) {
+                pinYinCode = pinYinCode.substring(0, 1);
+            }
+        } else {
+            pinYinCode = "";
+        }
+
+        String firstLetter = multPronounceMap.get(input);
+        // 对于某些多音字，映射到指定首字母
+        if (!TextUtils.isEmpty(firstLetter)) {
+            return firstLetter;
+        }
+        return pinYinCode.toUpperCase();
+    }
+
+    // 多音字转化
+    private void generateMultPronounceMap(){
+        multPronounceMap.put("阿", "A");
+        multPronounceMap.put("朝", "C");
+        multPronounceMap.put("哈", "H");
+        multPronounceMap.put("红", "H");
+        multPronounceMap.put("会", "H");
+        multPronounceMap.put("乐", "L");
+        multPronounceMap.put("齐", "Q");
+        multPronounceMap.put("信", "X");
+        multPronounceMap.put("长", "C");
+        multPronounceMap.put("广", "G");
+        multPronounceMap.put("单", "D");
     }
 
     /**
