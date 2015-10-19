@@ -218,6 +218,12 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
     private class  getMusicTask extends AsyncTask<Void,Void,Void> {
 
         @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            generateMultPronounceMap();
+        }
+
+        @Override
         protected Void doInBackground(Void... params) {
             L.d(TAG,"doInBackground");
             mMusics = getData();
