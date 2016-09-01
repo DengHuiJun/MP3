@@ -1,14 +1,19 @@
-package com.zero.mp3.activites;
+package com.zero.mp3.activities;
 
 import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.database.Cursor;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Debug;
+import android.os.IBinder;
+import android.os.Message;
+import android.os.Messenger;
+import android.os.RemoteException;
 import android.provider.MediaStore;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.widget.Toolbar;
@@ -16,11 +21,9 @@ import android.text.TextUtils;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.ProgressBar;
-import android.widget.SectionIndexer;
 import android.widget.TextView;
 
 import com.melnykov.fab.FloatingActionButton;
@@ -28,11 +31,11 @@ import com.zero.mp3.R;
 import com.zero.mp3.Utils.FirstLetterUtil;
 import com.zero.mp3.Utils.L;
 import com.zero.mp3.Utils.PlayUtils;
-import com.zero.mp3.Utils.StringMatcher;
 import com.zero.mp3.Utils.T;
 import com.zero.mp3.adapter.MusicListAdapter;
-import com.zero.mp3.app.AppContext;
+import com.zero.mp3.app.ConstantValue;
 import com.zero.mp3.beans.Music;
+import com.zero.mp3.service.PlayService;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -51,16 +54,22 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
 
     private List<Music> mMusics;
     private MusicListAdapter mAdapter;
-    private boolean isPlaying;
+
+    private boolean mIsPlaying;
+
     private Map<String, String> multPronounceMap = new HashMap<>();
 
-    private int mMusicCode; //播放模式
+    private int mPlayCode; //播放模式
 
     private int currentMusicId; //当前播放歌曲的序号
 
     private String mMusicUrl="";//暂时存储音乐路径
 
+    private Music mCurrentMusic;
+
     private MusicBroadcastReceiver mBroadcastReceiver;
+    private Messenger mPlayService;
+    private boolean mBound = false;
 
     @Bind(R.id.toolbar) Toolbar mToolbar;
 
@@ -89,6 +98,29 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
 
     @Bind(R.id.main_bottom_timer_ll) View mBottomTimerLl;
 
+    @Bind(R.id.no_tip_ly) View mNoTipLy;
+
+    @Bind(R.id.main_bottom_ly) View mMainBottomLy;
+
+    @Bind(R.id.list_content) View mListContentFl;
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        // Bind to the service
+        bindService(new Intent(this, PlayService.class), mConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        // Unbind from the service
+        if (mBound) {
+            unbindService(mConnection);
+            mBound = false;
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -98,10 +130,26 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
 
         getLastMusic();
         initReceiver();
-        initData();
         initToolBar();
         initListener();
+        initData();
     }
+
+    private ServiceConnection mConnection = new ServiceConnection() {
+
+        @Override
+        public void onServiceConnected(ComponentName className, IBinder service) {
+            mPlayService = new Messenger(service);
+            mBound = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName arg0) {
+            mPlayService = null;
+            mBound = false;
+        }
+    };
+
 
     /**
      * 首次打开获取最后一次播放的音乐
@@ -117,7 +165,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
     private void initReceiver() {
         mBroadcastReceiver = new MusicBroadcastReceiver();
         IntentFilter filter = new IntentFilter();
-        filter.addAction(AppContext.SEND_BROADCASR_ACTION);
+        filter.addAction(ConstantValue.SEND_BROADCASTER_ACTION);
         registerReceiver(mBroadcastReceiver, filter);
     }
 
@@ -130,35 +178,31 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
     }
 
     public void initData() {
-        isPlaying = false;
-        mMusicCode = AppContext.MUSIC_REPEAT;
+
+        generateMultPronounceMap();
+
+        mIsPlaying = false;
+
+        mPlayCode = ConstantValue.MUSIC_REPEAT;
 
         mMusics = new ArrayList<>();
         mAdapter = new MusicListAdapter(this, mMusics);
         mAddFAB.attachToListView(mMusicListView);
+
         mMusicListView.setAdapter(mAdapter);
         mMusicListView.setFastScrollEnabled(true);
 
         new getMusicTask().execute();
     }
 
-//    /**
-//     * 更新音乐列表
-//     */
-//    public void refreshData(){
-//        mUpdatePBar.setVisibility(View.VISIBLE);
-//        new getMusicTask().execute();
-//    }
-
     /**
      * 从内存卡中读取音乐列表
      * @return
      */
-    public List<Music> getData() {
+    public void getDataFromSD() {
         Cursor cursor = getContentResolver().query(
                 MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, null, null, null,
                 MediaStore.Audio.Media.DEFAULT_SORT_ORDER);
-        List<Music> musics = new ArrayList<>();
 
         for (int i = 0; i < cursor.getCount(); i++) {
             Music music = new Music();
@@ -185,10 +229,9 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
                 music.setDuration(duration);
                 music.setSize(size);
                 music.setUrl(url);
-                musics.add(music);
+                mMusics.add(music);
             }
         }
-        return musics;
     }
 
     @Override
@@ -196,78 +239,90 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
         final Music music = mMusics.get(position);
 
         mMusicUrl = music.getUrl();
-
         currentMusicId = position;
+
+        mCurrentMusic = music;
 
         L.d(TAG,"id="+currentMusicId);
 
         PlayUtils.saveMusicUrlByPf(this, mMusicUrl); //保存Url
-        PlayUtils.playMusicIntent(this, currentMusicId, mMusicUrl, AppContext.MUSIC_PLAY);
+
+        PlayUtils.playMusicIntent(this, currentMusicId, mMusicUrl, ConstantValue.MUSIC_PLAY);
 
         setBottomDisplay(music.getTitle(), music.getAirtist());
 
         mPlayIv.setImageResource(R.drawable.ic_action_playback_play);
         mBottomName.setFocusable(true);
         mBottomName.setFocusableInTouchMode(true);
-        isPlaying = true;
+        mIsPlaying = true;
     }
 
     /**
      * 从数据库读取音乐的任务
      */
-    private class  getMusicTask extends AsyncTask<Void,Void,Void> {
+    private class  getMusicTask extends AsyncTask<Void, Void, Void> {
 
         @Override
         protected void onPreExecute() {
-            super.onPreExecute();
-            generateMultPronounceMap();
+            mMainBottomLy.setVisibility(View.GONE);
+            mListContentFl.setVisibility(View.GONE);
+            mUpdatePBar.setVisibility(View.VISIBLE);
         }
 
         @Override
         protected Void doInBackground(Void... params) {
-            L.d(TAG,"doInBackground");
-            mMusics = getData();
+            getDataFromSD();
             return null;
         }
 
         @Override
         protected void onPostExecute(Void aVoid) {
-            super.onPostExecute(aVoid);
             L.d(TAG, "onPostExecute");
-
-            Collections.sort(mMusics, new Comparator<Music>() {
-                @Override
-                public int compare(Music lhs, Music rhs) {
-                    String l = hanziToPinyin(String.valueOf(lhs.getTitle().charAt(0)));
-                    String r = hanziToPinyin(String.valueOf(rhs.getTitle().charAt(0)));
-                    return   l.compareTo(r);
-                }
-            });
-
-            mAdapter.setmData(mMusics);
-            mAdapter.notifyDataSetChanged();
             mUpdatePBar.setVisibility(View.GONE);
 
-            //说明第一次加载，之前没有播发记录
-            if (mMusicUrl.equals(PlayUtils.MUSIC_SP_DEFAULT)) {
-                setBottomDisplay(mMusics.get(0).getTitle(),mMusics.get(0).getAirtist());
+            if (mMusics.size() > 1) {
+                Collections.sort(mMusics, new Comparator<Music>() {
+                    @Override
+                    public int compare(Music lhs, Music rhs) {
+                        String l = hanziToPinyin(String.valueOf(lhs.getTitle().charAt(0)));
+                        String r = hanziToPinyin(String.valueOf(rhs.getTitle().charAt(0)));
+                        return   l.compareTo(r);
+                    }
+                });
+            }
+
+            if (mMusics.isEmpty()) {
+                mNoTipLy.setVisibility(View.VISIBLE);
+                mListContentFl.setVisibility(View.GONE);
+                mMainBottomLy.setVisibility(View.GONE);
             } else {
-                String title = "";
-                String airtist = "";
-                boolean hasDeleteMusic = true; //是否删除了
-                for (Music item : mMusics) {
-                    if (item.getUrl().equals(mMusicUrl)) {
-                        title = item.getTitle();
-                        airtist = item.getAirtist();
-                        setBottomDisplay(title,airtist);
-                        hasDeleteMusic = false;
-                        break;
+                mNoTipLy.setVisibility(View.GONE);
+                mListContentFl.setVisibility(View.VISIBLE);
+                mMainBottomLy.setVisibility(View.VISIBLE);
+
+                //说明第一次加载，之前没有播发记录
+                if (mMusicUrl.equals(PlayUtils.MUSIC_SP_DEFAULT)) {
+                    setBottomDisplay(mMusics.get(0).getTitle(), mMusics.get(0).getAirtist());
+                } else {
+                    String title = "";
+                    String airtist = "";
+                    boolean hasDeleteMusic = true; // 是否删除了
+                    for (Music item : mMusics) {
+                        if (item.getUrl().equals(mMusicUrl)) {
+                            title = item.getTitle();
+                            airtist = item.getAirtist();
+                            setBottomDisplay(title, airtist);
+                            hasDeleteMusic = false;
+                            break;
+                        }
+                    }
+
+                    //删除了就设置第一首歌
+                    if (hasDeleteMusic) {
+                        setBottomDisplay(mMusics.get(0).getTitle(), mMusics.get(0).getAirtist());
                     }
                 }
-                //删除了就设置第一首歌
-                if (hasDeleteMusic) {
-                    setBottomDisplay(mMusics.get(0).getTitle(),mMusics.get(0).getAirtist());
-                }
+                mAdapter.notifyDataSetChanged();
             }
         }
     }
@@ -316,7 +371,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
      * @param title
      * @param artist
      */
-    public void setBottomDisplay(String title,String artist) {
+    public void setBottomDisplay(String title, String artist) {
         mBottomTitle.setText(title);
         mBottomName.setText(artist);
     }
@@ -326,20 +381,25 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
      */
     @OnClick(R.id.music_function_play_iv)
     public void playMusic() {
-        if (isPlaying) {
-            PlayUtils.playMusicIntent(this,currentMusicId,mMusicUrl,AppContext.MUSIC_PAUSE);
+        if (mIsPlaying) {
+            PlayUtils.playMusicIntent(this,currentMusicId,mMusicUrl, ConstantValue.MUSIC_PAUSE);
             L.d(TAG,"Send to service:pause");
             mPlayIv.setImageResource(R.drawable.ic_action_playback_pause);
             mBottomName.setFocusable(false);
             mBottomName.setFocusableInTouchMode(false);
-            isPlaying= false;
+            mIsPlaying = false;
         } else {
-            PlayUtils.playMusicIntent(this,currentMusicId,mMusicUrl,AppContext.MUSIC_PAUSE_TO_PLAY);
+
+            PlayUtils.playMusicIntent(this, currentMusicId,mMusicUrl, ConstantValue.MUSIC_PAUSE_TO_PLAY);
+            Message msg = Message.obtain();
+            msg.what = ConstantValue.MUSIC_PAUSE_TO_PLAY;
+
+
             L.d(TAG, "Send to service:pauseToPlay");
             mPlayIv.setImageResource(R.drawable.ic_action_playback_play);
             mBottomName.setFocusable(true);
             mBottomName.setFocusableInTouchMode(true);
-            isPlaying = true;
+            mIsPlaying = true;
         }
     }
 
@@ -348,8 +408,8 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
      */
     @OnClick(R.id.add_fab)
     public void setPlayMode() {
-        mMusicCode = (mMusicCode+1) % 3;
-        musicPlayMode(mMusicCode);
+        mPlayCode = (mPlayCode +1) % 3;
+        musicPlayMode(mPlayCode);
 
     }
 
@@ -358,7 +418,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
     public void nextMusic() {
         currentMusicId = (currentMusicId + 1) % mMusics.size();
         mMusicUrl = mMusics.get(currentMusicId).getUrl();
-        PlayUtils.playMusicIntent(this, currentMusicId, mMusicUrl, AppContext.MUSIC_PLAY);
+        PlayUtils.playMusicIntent(this, currentMusicId, mMusicUrl, ConstantValue.MUSIC_PLAY);
         setBottomDisplay(mMusics.get(currentMusicId).getTitle(), mMusics.get(currentMusicId).getAirtist());
         L.d(TAG,"nextId:" + currentMusicId);
     }
@@ -372,7 +432,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
             currentMusicId = mMusics.size()-1;
         }
         mMusicUrl = mMusics.get(currentMusicId).getUrl();
-        PlayUtils.playMusicIntent(this, currentMusicId, mMusicUrl, AppContext.MUSIC_PLAY);
+        PlayUtils.playMusicIntent(this, currentMusicId, mMusicUrl, ConstantValue.MUSIC_PLAY);
         setBottomDisplay(mMusics.get(currentMusicId).getTitle(), mMusics.get(currentMusicId).getAirtist());
         L.d(TAG, "previousId:" + currentMusicId );
     }
@@ -403,23 +463,37 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
     };
 
     /**
+     * 给后台服务发送指令
+     */
+    public void sendMsgToService(Message msg) {
+        if (!mBound)
+            return;
+        try {
+            mPlayService.send(msg);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    /**
      * 音乐播放模式
      */
     private void musicPlayMode(int code) {
         switch (code) {
-            case AppContext.MUSIC_REPEAT:
+            case ConstantValue.MUSIC_REPEAT:
                 T.showShort(getApplicationContext(),"切换到列表循环");
-                mMusicCode = AppContext.MUSIC_REPEAT;
+                mPlayCode = ConstantValue.MUSIC_REPEAT;
                 mAddFAB.setImageResource(R.drawable.ic_action_playback_repeat);
                 break;
-            case AppContext.MUSIC_REPEAT_ONE:
+            case ConstantValue.MUSIC_REPEAT_ONE:
                 T.showShort(getApplicationContext(),"切换到单曲循环");
-                mMusicCode = AppContext.MUSIC_REPEAT_ONE;
+                mPlayCode = ConstantValue.MUSIC_REPEAT_ONE;
                 mAddFAB.setImageResource(R.drawable.ic_action_playback_repeat_1);
                 break;
-            case AppContext.MUSIC_RANDOM:
+            case ConstantValue.MUSIC_RANDOM:
                 T.showShort(getApplicationContext(),"切换到随机播放");
-                mMusicCode = AppContext.MUSIC_RANDOM;
+                mPlayCode = ConstantValue.MUSIC_RANDOM;
                 mAddFAB.setImageResource(R.drawable.ic_action_playback_schuffle);
                 break;
         }
@@ -453,21 +527,21 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
             if (isPause) {
 
             } else {
-                switch(mMusicCode) {
-                    case AppContext.MUSIC_REPEAT:
+                switch(mPlayCode) {
+                    case ConstantValue.MUSIC_REPEAT:
                         currentMusicId = id;
                         nextMusic();
                         break;
-                    case AppContext.MUSIC_REPEAT_ONE:
+                    case ConstantValue.MUSIC_REPEAT_ONE:
                         currentMusicId = id;
                         mMusicUrl = mMusics.get(currentMusicId).getUrl();
-                        PlayUtils.playMusicIntent(MainActivity.this, id, mMusicUrl, AppContext.MUSIC_PLAY);
+                        PlayUtils.playMusicIntent(MainActivity.this, id, mMusicUrl, ConstantValue.MUSIC_PLAY);
                         setBottomDisplay(mMusics.get(currentMusicId).getTitle(), mMusics.get(currentMusicId).getAirtist());
                         break;
-                    case AppContext.MUSIC_RANDOM:
+                    case ConstantValue.MUSIC_RANDOM:
                         currentMusicId = getRandomId(mMusics.size());
                         mMusicUrl = mMusics.get(currentMusicId).getUrl();
-                        PlayUtils.playMusicIntent(MainActivity.this, id, mMusicUrl, AppContext.MUSIC_PLAY);
+                        PlayUtils.playMusicIntent(MainActivity.this, id, mMusicUrl, ConstantValue.MUSIC_PLAY);
                         setBottomDisplay(mMusics.get(currentMusicId).getTitle(), mMusics.get(currentMusicId).getAirtist());
                         break;
                 }

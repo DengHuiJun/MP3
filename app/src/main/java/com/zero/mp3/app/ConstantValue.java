@@ -4,7 +4,7 @@ package com.zero.mp3.app;
  * 放一些全局常量
  * Created by zero on 15-8-2.
  */
-public class AppContext {
+public class ConstantValue {
     public static final int MUSIC_REPEAT = 0 ;
     public static final int MUSIC_REPEAT_ONE = 1;
     public static final int MUSIC_RANDOM = 2;
@@ -16,10 +16,8 @@ public class AppContext {
 
     public static final int SERVICE_GET_LIST = 7;
     
-//    public static final int MUSIC_NEXT = 8;
-//    public static final int MUSIC_PREVIOUS = 9;
+    public static final int MUSIC_NEXT = 8;
+    public static final int MUSIC_PREVIOUS = 9;
 
-
-
-    public static final String SEND_BROADCASR_ACTION = "com.zero.mp3.PLAY_OVER";
+    public static final String SEND_BROADCASTER_ACTION = "com.zero.mp3.PLAY_OVER";
 }

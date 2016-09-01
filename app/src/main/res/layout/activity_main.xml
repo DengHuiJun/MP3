@@ -1,10 +1,9 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     xmlns:fab="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white"
-    tools:context=".MainActivity">
+    android:background="@color/white" >
+
     <android.support.v7.widget.Toolbar
         android:id="@+id/toolbar"
         android:layout_height="wrap_content"
@@ -15,20 +14,22 @@
     </android.support.v7.widget.Toolbar>
 
     <ProgressBar
-        android:layout_below="@+id/toolbar"
         android:id="@+id/update_music_pb"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true"
-        android:visibility="visible"/>
+        android:layout_below="@+id/toolbar"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:layout_centerInParent="true"
+        android:layout_marginTop="40dp"
+        android:visibility="gone" />
 
+    <include layout="@layout/no_content_tip" />
 
     <FrameLayout
-        android:layout_below="@+id/toolbar"
         android:id="@+id/list_content"
+        android:layout_below="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@+id/divider_line">
+        android:layout_above="@+id/main_bottom_ly">
 
         <com.zero.mp3.Utils.IndexableListView
             android:id="@+id/music_list_lv"
@@ -52,133 +53,135 @@
 
     </FrameLayout>
 
-    <View
-        android:id="@+id/divider_line"
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_above="@+id/main_bottom_ll"
-        android:background="@color/black"
-        />
-
     <LinearLayout
-        android:id="@+id/main_bottom_ll"
+        android:id="@+id/main_bottom_ly"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:background="@color/white"
         android:orientation="vertical"
         >
-    <LinearLayout
-        android:id="@+id/main_bottom_timer_ll"
-        android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:orientation="horizontal"
-        android:visibility="gone">
 
-        <TextView
-            android:id="@+id/main_bottom_timer_left"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:textColor="@color/black"
-            android:gravity="center"
-            android:text="03:33" />
-
-        <TextView
-            android:id="@+id/test"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="4"
-            android:background="#00ff00"/>
-
-        <TextView
-            android:id="@+id/main_bottom_timer_right"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:textColor="@color/black"
-            android:gravity="center"
-            android:text="04:21" />
-
-    </LinearLayout>
-
-    <RelativeLayout
-        android:id="@+id/main_bottom_rl"
-        android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:paddingLeft="10dp"
-        android:paddingRight="16dp"
-        >
-
-        <ImageView
-            android:id="@+id/music_photo_iv"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentLeft="true"
-            android:layout_centerVertical="true"
-            android:src="@drawable/ic_action_record"/>
+        <View
+            android:id="@+id/divider_line"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_above="@+id/main_bottom_ly"
+            android:background="@color/black"
+            />
 
 
         <LinearLayout
-            android:id="@+id/music_show_ll"
-            android:layout_toRightOf="@+id/music_photo_iv"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_marginLeft="5dp"
-            android:gravity="center_vertical"
-            android:orientation="vertical">
+            android:id="@+id/main_bottom_timer_ll"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:orientation="horizontal"
+            android:visibility="gone">
 
             <TextView
-                android:id="@+id/music_title_tv"
-                android:layout_width="200dp"
-                android:layout_height="wrap_content"
-                android:textSize="18sp"
-                android:ellipsize="marquee"
-                android:focusable="true"
-                android:focusableInTouchMode="true"
-                android:marqueeRepeatLimit="marquee_forever"
+                android:id="@+id/main_bottom_timer_left"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
                 android:textColor="@color/black"
-                android:singleLine="true"
-                android:text="我爱的人"/>
+                android:gravity="center"
+                android:text="03:33" />
 
             <TextView
-                android:layout_marginTop="5dp"
-                android:id="@+id/singer_name_tv"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="12sp"
-                android:textColor="@color/font_gray"
-                android:text="林宥嘉"/>
+                android:id="@+id/test"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="4"
+                android:background="#00ff00"/>
+
+            <TextView
+                android:id="@+id/main_bottom_timer_right"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:textColor="@color/black"
+                android:gravity="center"
+                android:text="04:21" />
 
         </LinearLayout>
 
-        <ImageView
-            android:id="@+id/music_function_next_iv"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentRight="true"
-            android:layout_centerVertical="true"
-            android:src="@drawable/ic_action_playback_next"
-            />
-        <ImageView
-            android:id="@+id/music_function_play_iv"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_toLeftOf="@id/music_function_next_iv"
-            android:layout_centerVertical="true"
-            android:layout_marginRight="10dp"
-            android:src="@drawable/ic_action_playback_pause"/>
+        <RelativeLayout
+            android:id="@+id/main_bottom_rl"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:paddingLeft="10dp"
+            android:paddingRight="16dp"
+            >
 
-        <ImageView
-            android:layout_marginRight="10dp"
-            android:id="@+id/music_function_previous_iv"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_toLeftOf="@id/music_function_play_iv"
-            android:layout_centerVertical="true"
-            android:src="@drawable/ic_action_playback_prev"/>
+            <ImageView
+                android:id="@+id/music_photo_iv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentLeft="true"
+                android:layout_centerVertical="true"
+                android:src="@drawable/ic_action_record"/>
 
-    </RelativeLayout>
+
+            <LinearLayout
+                android:id="@+id/music_show_ll"
+                android:layout_toRightOf="@+id/music_photo_iv"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_marginLeft="5dp"
+                android:gravity="center_vertical"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/music_title_tv"
+                    android:layout_width="200dp"
+                    android:layout_height="wrap_content"
+                    android:textSize="18sp"
+                    android:ellipsize="marquee"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
+                    android:marqueeRepeatLimit="marquee_forever"
+                    android:textColor="@color/black"
+                    android:singleLine="true"
+                    android:text="我爱的人"/>
+
+                <TextView
+                    android:layout_marginTop="5dp"
+                    android:id="@+id/singer_name_tv"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="12sp"
+                    android:textColor="@color/font_gray"
+                    android:text="林宥嘉"/>
+
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/music_function_next_iv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentRight="true"
+                android:layout_centerVertical="true"
+                android:src="@drawable/ic_action_playback_next"
+                />
+            <ImageView
+                android:id="@+id/music_function_play_iv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_toLeftOf="@id/music_function_next_iv"
+                android:layout_centerVertical="true"
+                android:layout_marginRight="10dp"
+                android:src="@drawable/ic_action_playback_pause"/>
+
+            <ImageView
+                android:layout_marginRight="10dp"
+                android:id="@+id/music_function_previous_iv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_toLeftOf="@id/music_function_play_iv"
+                android:layout_centerVertical="true"
+                android:src="@drawable/ic_action_playback_prev"/>
+
+        </RelativeLayout>
 
     </LinearLayout>
 

@@ -28,13 +28,13 @@ public class MusicListAdapter extends BaseAdapter implements SectionIndexer{
     private String mSections = "#ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 
-    public MusicListAdapter(Context context,List<Music>  mData){
+    public MusicListAdapter(Context context, List<Music> mData){
         this.context = context;
         this.mData = mData;
         inflater = LayoutInflater.from(context);
     }
 
-    public void setmData(List<Music> mData) {
+    public void setData(List<Music> mData) {
         this.mData = mData;
     }
 
@@ -57,17 +57,14 @@ public class MusicListAdapter extends BaseAdapter implements SectionIndexer{
     public View getView(int position, View convertView, ViewGroup parent) {
         final Music music = mData.get(position);
         ViewHolder viewHolder = null;
-        if (convertView == null)
-        {
+        if (convertView == null) {
             viewHolder = new ViewHolder();
-            convertView = inflater.inflate(R.layout.music_item,null);
+            convertView = inflater.inflate(R.layout.music_item, null);
             viewHolder.title = (TextView) convertView.findViewById(R.id.music_item_title);
             viewHolder.artist = (TextView) convertView.findViewById(R.id.music_item_artist);
             viewHolder.time = (TextView) convertView.findViewById(R.id.music_time_tv);
             convertView.setTag(viewHolder);
-        }
-        else
-        {
+        } else {
             viewHolder = (ViewHolder) convertView.getTag();
         }
 
@@ -104,9 +101,9 @@ public class MusicListAdapter extends BaseAdapter implements SectionIndexer{
      */
     private String toFormat(long s){
         String d = "";
-        if (s < 10){
-            d = "0"+Long.toString(s);
-        }else{
+        if (s < 10) {
+            d = "0"+ Long.toString(s);
+        } else {
             d = Long.toString(s);
         }
         return d;
@@ -150,9 +147,7 @@ public class MusicListAdapter extends BaseAdapter implements SectionIndexer{
         if (input.length() > 1) {
             input = input.substring(0,1);
         }
-
         String pinYinCode = FirstLetterUtil.getFirstLetter(input);
-
         if (pinYinCode != null) {
             if (pinYinCode.length() > 1) {
                 pinYinCode = pinYinCode.substring(0, 1);
@@ -160,7 +155,6 @@ public class MusicListAdapter extends BaseAdapter implements SectionIndexer{
         } else {
             pinYinCode = "";
         }
-
         return pinYinCode.toUpperCase();
     }
 

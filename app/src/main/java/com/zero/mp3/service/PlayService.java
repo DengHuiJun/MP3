@@ -6,12 +6,16 @@ import android.app.Service;
 import android.content.Intent;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Message;
+import android.os.Messenger;
+import android.widget.Toast;
 
 import com.zero.mp3.R;
 import com.zero.mp3.Utils.L;
-import com.zero.mp3.activites.MainActivity;
-import com.zero.mp3.app.AppContext;
+import com.zero.mp3.activities.MainActivity;
+import com.zero.mp3.app.ConstantValue;
 
 /**
  * 播放音乐的服务
@@ -19,23 +23,54 @@ import com.zero.mp3.app.AppContext;
  */
 public class PlayService extends Service {
 
-    private final static String TAG = "PlayService";
+    public final static String TAG = "PlayService";
 
     private MediaPlayer mMediaPlayer;
-
     private String mMusicPath;
 
     private int mPausePosition; //记录停顿的时间
-
     private int mPlayCode; //从Activity传递来的播放指令
-
     private int mMusicId; //播放音乐的序号
 
     private boolean isPause; // 是否暂停
 
+    public static final int MSG_SAY_HELLO = 1;
+    final Messenger mMessenger = new Messenger(new IncomingHandler());
+
+    /**
+     * Handler of incoming messages from clients.
+     */
+    static class IncomingHandler extends Handler {
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case ConstantValue.MUSIC_PLAY:
+                    break;
+
+                case ConstantValue.MUSIC_NEXT:
+                    break;
+
+                case ConstantValue.MUSIC_PREVIOUS:
+                    break;
+
+                case ConstantValue.MUSIC_PAUSE:
+                    break;
+
+                case ConstantValue.MUSIC_STOP:
+                    break;
+
+                case ConstantValue.MUSIC_PAUSE_TO_PLAY:
+                    break;
+
+                default:
+                    super.handleMessage(msg);
+            }
+        }
+    }
+
     @Override
     public IBinder onBind(Intent intent) {
-        return null;
+        return mMessenger.getBinder();
     }
 
     @Override
@@ -116,7 +151,6 @@ public class PlayService extends Service {
 
     public void stop(){
         if(mMediaPlayer != null) {
-
             mMediaPlayer.stop();
             try {
                 mMediaPlayer.prepare(); // 在调用stop后如果需要再次通过start进行播放,需要之前调用prepare函数
@@ -128,14 +162,13 @@ public class PlayService extends Service {
     }
 
     public void pause(){
-            L.d(TAG,mMediaPlayer.isPlaying()+"boolean");
-//        if (mMediaPlayer != null && mMediaPlayer.isPlaying()) {
+            L.d(TAG, mMediaPlayer.isPlaying()+"boolean");
+
             mMediaPlayer.pause();
             mPausePosition =  mMediaPlayer.getCurrentPosition();
             isPause = true;
-            L.d(TAG,"action pause()："+mPausePosition);
-//        }
 
+            L.d(TAG,"action pause()："+mPausePosition);
     }
 
     /**
@@ -179,13 +212,13 @@ public class PlayService extends Service {
 
     private void doPlayAction(int code,Intent intent){
         switch (code){
-            case AppContext.MUSIC_PLAY:
+            case ConstantValue.MUSIC_PLAY:
                 play(0);
                 break;
-            case AppContext.MUSIC_PAUSE:
+            case ConstantValue.MUSIC_PAUSE:
                 pause();
                 break;
-            case AppContext.MUSIC_PAUSE_TO_PLAY:
+            case ConstantValue.MUSIC_PAUSE_TO_PLAY:
                 play(mPausePosition);
                 break;
         }
@@ -195,7 +228,7 @@ public class PlayService extends Service {
      * 发送一个广播，当前音乐播放完成,传递歌曲的序号
      */
     private void sendPlayOverMessage(){
-        Intent intent = new Intent(AppContext.SEND_BROADCASR_ACTION);
+        Intent intent = new Intent(ConstantValue.SEND_BROADCASTER_ACTION);
         intent.putExtra("musicId",mMusicId);
         intent.putExtra("isPause",isPause);
         sendBroadcast(intent);
@@ -206,18 +239,16 @@ public class PlayService extends Service {
      * 释放及时资源
      * @param mp
      */
-    private void releaseMediePlay(MediaPlayer mp){
-        if (mp != null && mp.isPlaying())
-        {
-         mp.stop();
-         mp.release();
+    private void releaseMediaPlay(MediaPlayer mp){
+        if (mp != null && mp.isPlaying()) {
+            mp.stop();
+            mp.release();
         }
     }
-
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        releaseMediePlay(mMediaPlayer);
+        releaseMediaPlay(mMediaPlayer);
     }
 }
