@@ -3,17 +3,28 @@ package com.zero.mp3.beans;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import org.json.JSONObject;
+
 /**
  * 音乐类，展示如何实现Parcelable
  * Created by zero on 15-8-2.
  */
-public class Music implements Parcelable{
+public class Music implements Parcelable {
     private long id;  // 音乐Id
     private String title; //歌曲名
     private String airtist; //歌手名
     private long duration;     //时长
     private long size;      //文件大小
     private String url;  //文件路径
+    private int pausePosition = 0;
+
+    public int getPausePosition() {
+        return pausePosition;
+    }
+
+    public void setPausePosition(int pausePosition) {
+        this.pausePosition = pausePosition;
+    }
 
     public long getId() {
         return id;
@@ -76,6 +87,7 @@ public class Music implements Parcelable{
         dest.writeLong(duration);
         dest.writeLong(size);
         dest.writeString(url);
+        dest.writeInt(pausePosition);
     }
 
     public static final Parcelable.Creator<Music> CREATOR = new Creator<Music>() {
@@ -97,9 +109,16 @@ public class Music implements Parcelable{
         duration = in.readLong();
         size = in.readLong();
         url = in.readString();
+        pausePosition = in.readInt();
     }
 
     public Music(){
 
+    }
+
+    public String toJSON() {
+        String temp = "";
+
+        return temp;
     }
 }

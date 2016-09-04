@@ -12,12 +12,11 @@ public class ConstantValue {
     public static final int MUSIC_PLAY = 3;
     public static final int MUSIC_PAUSE = 4;
     public static final int MUSIC_STOP = 5;
-    public static final int MUSIC_PAUSE_TO_PLAY = 6;
 
-    public static final int SERVICE_GET_LIST = 7;
-    
     public static final int MUSIC_NEXT = 8;
     public static final int MUSIC_PREVIOUS = 9;
+
+    public static final int MUSIC_PLAY_FINISH = 10;
 
     public static final String SEND_BROADCASTER_ACTION = "com.zero.mp3.PLAY_OVER";
 }

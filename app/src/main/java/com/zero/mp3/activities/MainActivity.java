@@ -1,15 +1,13 @@
 package com.zero.mp3.activities;
 
-import android.annotation.SuppressLint;
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.database.Cursor;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
@@ -61,15 +59,22 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
 
     private int mPlayCode; //播放模式
 
-    private int currentMusicId; //当前播放歌曲的序号
-
-    private String mMusicUrl="";//暂时存储音乐路径
-
     private Music mCurrentMusic;
 
-    private MusicBroadcastReceiver mBroadcastReceiver;
     private Messenger mPlayService;
     private boolean mBound = false;
+
+    private Messenger mGetMsgFromService = new Messenger(new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+
+            if (msg.what == ConstantValue.MUSIC_PLAY_FINISH) {
+                nextMusic();
+            }
+            super.handleMessage(msg);
+
+        }
+    });
 
     @Bind(R.id.toolbar) Toolbar mToolbar;
 
@@ -126,10 +131,8 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
-        L.d(TAG, TAG);
 
-        getLastMusic();
-        initReceiver();
+        initLastTimeMusic();
         initToolBar();
         initListener();
         initData();
@@ -154,19 +157,12 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
     /**
      * 首次打开获取最后一次播放的音乐
      */
-    private void getLastMusic() {
-        mMusicUrl = PlayUtils.getMusicUrlByPf(this);
+    private void initLastTimeMusic() {
+        mCurrentMusic = PlayUtils.getMusicByPf(this);
     }
 
     private void initListener() {
         mMusicListView.setOnItemClickListener(this);
-    }
-
-    private void initReceiver() {
-        mBroadcastReceiver = new MusicBroadcastReceiver();
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(ConstantValue.SEND_BROADCASTER_ACTION);
-        registerReceiver(mBroadcastReceiver, filter);
     }
 
     private void initToolBar() {
@@ -192,7 +188,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
         mMusicListView.setAdapter(mAdapter);
         mMusicListView.setFastScrollEnabled(true);
 
-        new getMusicTask().execute();
+        new LoadMusicDataTask().execute();
     }
 
     /**
@@ -200,36 +196,49 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
      * @return
      */
     public void getDataFromSD() {
-        Cursor cursor = getContentResolver().query(
-                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, null, null, null,
-                MediaStore.Audio.Media.DEFAULT_SORT_ORDER);
+        Cursor cursor = null;
 
-        for (int i = 0; i < cursor.getCount(); i++) {
-            Music music = new Music();
-            cursor.moveToNext();
-            long id = cursor.getLong(cursor
-                    .getColumnIndex(MediaStore.Audio.Media._ID));   //音乐id
-            String title = cursor.getString((cursor
-                    .getColumnIndex(MediaStore.Audio.Media.TITLE)));//音乐标题
-            String artist = cursor.getString(cursor
-                    .getColumnIndex(MediaStore.Audio.Media.ARTIST));//艺术家
-            long duration = cursor.getLong(cursor
-                    .getColumnIndex(MediaStore.Audio.Media.DURATION));//时长
-            long size = cursor.getLong(cursor
-                    .getColumnIndex(MediaStore.Audio.Media.SIZE));  //文件大小
-            String url = cursor.getString(cursor
-                    .getColumnIndex(MediaStore.Audio.Media.DATA));   //文件路径
-            int isMusic = cursor.getInt(cursor
-                    .getColumnIndex(MediaStore.Audio.Media.IS_MUSIC));//是否为音乐
+        try {
+            cursor = getContentResolver().query(
+                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, null, null, null,
+                    MediaStore.Audio.Media.DEFAULT_SORT_ORDER);
 
-            if (isMusic != 0 ) {
-                music.setId(id);
-                music.setTitle(title);
-                music.setAirtist(artist);
-                music.setDuration(duration);
-                music.setSize(size);
-                music.setUrl(url);
-                mMusics.add(music);
+            if (cursor == null) {
+                return;
+            }
+            Music music;
+            while (cursor.moveToNext()) {
+                music = new Music();
+                long id = cursor.getLong(cursor
+                        .getColumnIndex(MediaStore.Audio.Media._ID));   // 音乐id
+                String title = cursor.getString((cursor
+                        .getColumnIndex(MediaStore.Audio.Media.TITLE))); // 音乐标题
+                String artist = cursor.getString(cursor
+                        .getColumnIndex(MediaStore.Audio.Media.ARTIST)); // 艺术家
+                long duration = cursor.getLong(cursor
+                        .getColumnIndex(MediaStore.Audio.Media.DURATION)); // 时长
+                long size = cursor.getLong(cursor
+                        .getColumnIndex(MediaStore.Audio.Media.SIZE));  // 文件大小
+                String url = cursor.getString(cursor
+                        .getColumnIndex(MediaStore.Audio.Media.DATA));   // 文件路径
+                int isMusic = cursor.getInt(cursor
+                        .getColumnIndex(MediaStore.Audio.Media.IS_MUSIC)); // 是否为音乐
+
+                if (isMusic != 0) {
+                    music.setId(id);
+                    music.setTitle(title);
+                    music.setAirtist(artist);
+                    music.setDuration(duration);
+                    music.setSize(size);
+                    music.setUrl(url);
+                    mMusics.add(music);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (cursor != null) {
+                cursor.close();
             }
         }
     }
@@ -237,30 +246,19 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         final Music music = mMusics.get(position);
-
-        mMusicUrl = music.getUrl();
-        currentMusicId = position;
-
         mCurrentMusic = music;
+        sendMsgToService(ConstantValue.MUSIC_PLAY, music);
 
-        L.d(TAG,"id="+currentMusicId);
-
-        PlayUtils.saveMusicUrlByPf(this, mMusicUrl); //保存Url
-
-        PlayUtils.playMusicIntent(this, currentMusicId, mMusicUrl, ConstantValue.MUSIC_PLAY);
-
-        setBottomDisplay(music.getTitle(), music.getAirtist());
-
+        refreshBottomDisplay();
         mPlayIv.setImageResource(R.drawable.ic_action_playback_play);
         mBottomName.setFocusable(true);
         mBottomName.setFocusableInTouchMode(true);
-        mIsPlaying = true;
     }
 
     /**
      * 从数据库读取音乐的任务
      */
-    private class  getMusicTask extends AsyncTask<Void, Void, Void> {
+    private class  LoadMusicDataTask extends AsyncTask<Void, Void, Void> {
 
         @Override
         protected void onPreExecute() {
@@ -286,7 +284,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
                     public int compare(Music lhs, Music rhs) {
                         String l = hanziToPinyin(String.valueOf(lhs.getTitle().charAt(0)));
                         String r = hanziToPinyin(String.valueOf(rhs.getTitle().charAt(0)));
-                        return   l.compareTo(r);
+                        return l.compareTo(r);
                     }
                 });
             }
@@ -300,34 +298,20 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
                 mListContentFl.setVisibility(View.VISIBLE);
                 mMainBottomLy.setVisibility(View.VISIBLE);
 
-                //说明第一次加载，之前没有播发记录
-                if (mMusicUrl.equals(PlayUtils.MUSIC_SP_DEFAULT)) {
-                    setBottomDisplay(mMusics.get(0).getTitle(), mMusics.get(0).getAirtist());
+                // 之前没有播发记录
+                if (mCurrentMusic == null) {
+                    mCurrentMusic = mMusics.get(0);
                 } else {
-                    String title = "";
-                    String airtist = "";
-                    boolean hasDeleteMusic = true; // 是否删除了
-                    for (Music item : mMusics) {
-                        if (item.getUrl().equals(mMusicUrl)) {
-                            title = item.getTitle();
-                            airtist = item.getAirtist();
-                            setBottomDisplay(title, airtist);
-                            hasDeleteMusic = false;
-                            break;
-                        }
-                    }
-
-                    //删除了就设置第一首歌
-                    if (hasDeleteMusic) {
-                        setBottomDisplay(mMusics.get(0).getTitle(), mMusics.get(0).getAirtist());
+                    if (!mMusics.contains(mCurrentMusic)) {
+                        mCurrentMusic = mMusics.get(0);
                     }
                 }
+                refreshBottomDisplay();
                 mAdapter.notifyDataSetChanged();
             }
         }
     }
 
-    @SuppressLint("DefaultLocale")
     private String hanziToPinyin(String input) {
         if (input.length() > 1) {
             input = input.substring(0,1);
@@ -368,12 +352,10 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
 
     /**
      * 在底部设置正在播放的曲名与作者
-     * @param title
-     * @param artist
      */
-    public void setBottomDisplay(String title, String artist) {
-        mBottomTitle.setText(title);
-        mBottomName.setText(artist);
+    public void refreshBottomDisplay() {
+        mBottomTitle.setText(mCurrentMusic.getTitle());
+        mBottomName.setText(mCurrentMusic.getAirtist());
     }
 
     /**
@@ -382,20 +364,16 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
     @OnClick(R.id.music_function_play_iv)
     public void playMusic() {
         if (mIsPlaying) {
-            PlayUtils.playMusicIntent(this,currentMusicId,mMusicUrl, ConstantValue.MUSIC_PAUSE);
-            L.d(TAG,"Send to service:pause");
+
+            sendMsgToService(ConstantValue.MUSIC_PAUSE, mCurrentMusic);
+
             mPlayIv.setImageResource(R.drawable.ic_action_playback_pause);
             mBottomName.setFocusable(false);
             mBottomName.setFocusableInTouchMode(false);
-            mIsPlaying = false;
         } else {
 
-            PlayUtils.playMusicIntent(this, currentMusicId,mMusicUrl, ConstantValue.MUSIC_PAUSE_TO_PLAY);
-            Message msg = Message.obtain();
-            msg.what = ConstantValue.MUSIC_PAUSE_TO_PLAY;
+            sendMsgToService(ConstantValue.MUSIC_PLAY, mCurrentMusic);
 
-
-            L.d(TAG, "Send to service:pauseToPlay");
             mPlayIv.setImageResource(R.drawable.ic_action_playback_play);
             mBottomName.setFocusable(true);
             mBottomName.setFocusableInTouchMode(true);
@@ -416,25 +394,28 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
     //下一曲
     @OnClick(R.id.music_function_next_iv)
     public void nextMusic() {
-        currentMusicId = (currentMusicId + 1) % mMusics.size();
-        mMusicUrl = mMusics.get(currentMusicId).getUrl();
-        PlayUtils.playMusicIntent(this, currentMusicId, mMusicUrl, ConstantValue.MUSIC_PLAY);
-        setBottomDisplay(mMusics.get(currentMusicId).getTitle(), mMusics.get(currentMusicId).getAirtist());
-        L.d(TAG,"nextId:" + currentMusicId);
+        T.showShort(this, "下一曲");
+        int nextPosition = (mMusics.indexOf(mCurrentMusic) + 1) % mMusics.size();
+        mCurrentMusic = mMusics.get(nextPosition);
+        mCurrentMusic.setPausePosition(0);
+
+        sendMsgToService(ConstantValue.MUSIC_NEXT, mCurrentMusic);
+
+        refreshBottomDisplay();
     }
 
     //上一曲
     @OnClick(R.id.music_function_previous_iv)
     public void previousMusic() {
-        T.showShort(this, "prev music");
-        currentMusicId = (currentMusicId - 1) % mMusics.size();
-        if (currentMusicId == -1){
-            currentMusicId = mMusics.size()-1;
+        T.showShort(this, "上一曲");
+        int previousPosition = (mMusics.indexOf(mCurrentMusic) - 1) % mMusics.size();
+        if (previousPosition < 0) {
+            previousPosition = 0;
         }
-        mMusicUrl = mMusics.get(currentMusicId).getUrl();
-        PlayUtils.playMusicIntent(this, currentMusicId, mMusicUrl, ConstantValue.MUSIC_PLAY);
-        setBottomDisplay(mMusics.get(currentMusicId).getTitle(), mMusics.get(currentMusicId).getAirtist());
-        L.d(TAG, "previousId:" + currentMusicId );
+        mCurrentMusic = mMusics.get(previousPosition);
+
+        sendMsgToService(ConstantValue.MUSIC_PREVIOUS, mCurrentMusic);
+        refreshBottomDisplay();
     }
 
     @OnClick(R.id.music_show_ll)
@@ -465,10 +446,21 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
     /**
      * 给后台服务发送指令
      */
-    public void sendMsgToService(Message msg) {
-        if (!mBound)
+    public void sendMsgToService(int code, Music music) {
+        if (!mBound || mCurrentMusic == null)
             return;
         try {
+
+            if (code == ConstantValue.MUSIC_PLAY) {
+                mIsPlaying = true;
+            } else if (code == ConstantValue.MUSIC_PAUSE) {
+                mIsPlaying = false;
+            }
+
+            Message msg = Message.obtain();
+            msg.what = code;
+            msg.obj = music;
+            msg.replyTo = mGetMsgFromService;
             mPlayService.send(msg);
         } catch (RemoteException e) {
             e.printStackTrace();
@@ -477,22 +469,22 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
 
 
     /**
-     * 音乐播放模式
+     * 设置播放模式
      */
     private void musicPlayMode(int code) {
         switch (code) {
             case ConstantValue.MUSIC_REPEAT:
-                T.showShort(getApplicationContext(),"切换到列表循环");
+                T.showShort(getApplicationContext(), "切换到列表循环");
                 mPlayCode = ConstantValue.MUSIC_REPEAT;
                 mAddFAB.setImageResource(R.drawable.ic_action_playback_repeat);
                 break;
             case ConstantValue.MUSIC_REPEAT_ONE:
-                T.showShort(getApplicationContext(),"切换到单曲循环");
+                T.showShort(getApplicationContext(), "切换到单曲循环");
                 mPlayCode = ConstantValue.MUSIC_REPEAT_ONE;
                 mAddFAB.setImageResource(R.drawable.ic_action_playback_repeat_1);
                 break;
             case ConstantValue.MUSIC_RANDOM:
-                T.showShort(getApplicationContext(),"切换到随机播放");
+                T.showShort(getApplicationContext(), "切换到随机播放");
                 mPlayCode = ConstantValue.MUSIC_RANDOM;
                 mAddFAB.setImageResource(R.drawable.ic_action_playback_schuffle);
                 break;
@@ -502,51 +494,11 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
     @Override
     protected void onDestroy() {
         ButterKnife.unbind(this);
-        unregisterReceiver(mBroadcastReceiver);
-        PlayUtils.saveMusicUrlByPf(this,mMusicUrl);
+
+        if (mCurrentMusic != null) {
+            PlayUtils.saveMusicByPf(this, mCurrentMusic);
+        }
         super.onDestroy();
-    }
-
-    /**
-     * 广播接收器，用来监听音乐的播放情况
-     */
-    public class  MusicBroadcastReceiver extends BroadcastReceiver{
-
-        public MusicBroadcastReceiver() {
-
-        }
-
-        @Override
-        public void onReceive(Context context, Intent intent) {
-
-            int id = intent.getIntExtra("musicId",0);
-            boolean isPause = intent.getBooleanExtra("isPause", true);
-
-            L.d(TAG,"Receive id :"+id);
-
-            if (isPause) {
-
-            } else {
-                switch(mPlayCode) {
-                    case ConstantValue.MUSIC_REPEAT:
-                        currentMusicId = id;
-                        nextMusic();
-                        break;
-                    case ConstantValue.MUSIC_REPEAT_ONE:
-                        currentMusicId = id;
-                        mMusicUrl = mMusics.get(currentMusicId).getUrl();
-                        PlayUtils.playMusicIntent(MainActivity.this, id, mMusicUrl, ConstantValue.MUSIC_PLAY);
-                        setBottomDisplay(mMusics.get(currentMusicId).getTitle(), mMusics.get(currentMusicId).getAirtist());
-                        break;
-                    case ConstantValue.MUSIC_RANDOM:
-                        currentMusicId = getRandomId(mMusics.size());
-                        mMusicUrl = mMusics.get(currentMusicId).getUrl();
-                        PlayUtils.playMusicIntent(MainActivity.this, id, mMusicUrl, ConstantValue.MUSIC_PLAY);
-                        setBottomDisplay(mMusics.get(currentMusicId).getTitle(), mMusics.get(currentMusicId).getAirtist());
-                        break;
-                }
-            }
-        }
     }
 
     /**
@@ -554,7 +506,7 @@ public class MainActivity extends ActionBarActivity implements AdapterView.OnIte
      * @param length
      * @return
      */
-    public int getRandomId(int length){
+    public int getRandomId(int length) {
         return (int)(Math.random()*1000)%length;
     }
 }

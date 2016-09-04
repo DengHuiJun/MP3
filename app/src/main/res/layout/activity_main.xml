@@ -31,14 +31,13 @@
         android:layout_height="match_parent"
         android:layout_above="@+id/main_bottom_ly">
 
-        <com.zero.mp3.Utils.IndexableListView
-            android:id="@+id/music_list_lv"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:dividerHeight="1px"
-            android:divider="@color/SILVER"
-            android:background="@color/primary"
-            />
+            <com.zero.mp3.Utils.IndexableListView
+                android:id="@+id/music_list_lv"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:dividerHeight="1px"
+                android:divider="@color/SILVER"
+                android:background="@color/primary" />
 
         <com.melnykov.fab.FloatingActionButton
             android:id="@+id/add_fab"
