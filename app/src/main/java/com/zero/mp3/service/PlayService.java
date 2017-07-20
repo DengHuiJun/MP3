@@ -31,6 +31,7 @@ public class PlayService extends Service {
 
     private Music mCurrentMusic;
 
+    // 如果有多个Client 可以使用List管理起来
     private Messenger mClientMessenger;
 
     final Messenger mMessenger = new Messenger(new IncomingHandler());
